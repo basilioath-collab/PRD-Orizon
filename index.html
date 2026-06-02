@@ -126,6 +126,9 @@
     .btn.ghost:hover{background:var(--primary-wash)}
 
     .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid var(--border);font-size:11px;font-weight:800;color:var(--muted);background:#fff}
+    .pill.warn{border-color:rgba(245,158,11,.48);background:var(--warning-soft);color:#92400E}
+    .pill.bad{border-color:var(--danger-border);background:var(--danger-soft);color:var(--danger)}
+    .pill.info{border-color:rgba(79,70,229,.22);background:rgba(79,70,229,.08);color:var(--indigo)}
     .pill .dot{height:10px;width:10px;border-radius:999px;border:1px solid rgba(0,0,0,.15)}
 
     .pill .xbtn{margin-left:4px;border:none;background:transparent;cursor:pointer;font-weight:950;color:var(--muted);line-height:1;padding:0 4px;border-radius:8px}
@@ -331,6 +334,7 @@
     /* Barra de progresso (alocação) */
     .bar{height:10px;background:var(--border);border-radius:999px;overflow:hidden;border:1px solid rgba(0,0,0,.05)}
     .bar > span{display:block;height:100%;background:var(--progress-cyan)}
+    .bar.reprogrammed > span{background:linear-gradient(90deg,#ef4444,#dc2626)}
 
     /* Modal de detalhes do dia */
     dialog.modal{border:0;padding:0;background:transparent;max-width:980px;width:calc(100% - 24px)}
@@ -448,10 +452,14 @@ main{padding:14px;overflow-x:hidden}
   flex: 0 0 auto;
 }
 .userWarningBox strong{font-weight:800;}
+.userFlowBlock{border:1px solid var(--line);border-radius:14px;padding:12px;background:rgba(255,255,255,.64);min-width:0;}
+.userFlowBlock select,.userFlowBlock input[type="text"],.userFlowBlock input:not([type]){width:100%;min-width:0;}
+.userFlowBlock select{height:40px;border:1px solid var(--line);border-radius:12px;padding:0 10px;background:#fff;font-weight:800;color:var(--text);}
+.userFlowBlock select:disabled,.userFlowBlock input:disabled{opacity:.65;cursor:not-allowed;background:#f8fafc;}
 
 
 /* --- Premium User Modal polish --- */
-.modalUserPremium{max-width:560px;padding:18px 18px 16px;border-radius:18px;}
+.modalUserPremium{width:min(920px, calc(100vw - 28px));max-width:920px;max-height:calc(100vh - 28px);overflow:auto;padding:18px 18px 16px;border-radius:18px;}
 .modalUserHd{padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid rgba(15,23,42,.08);}
 .modalCloseBtn{border-radius:999px;min-width:38px;height:38px;display:flex;align-items:center;justify-content:center;}
 .userWarningCompact{margin-top:0;margin-bottom:14px;}
@@ -465,7 +473,8 @@ main{padding:14px;overflow-x:hidden}
 .eventFolderStatus.reconnect .eventFolderDot{background:#DC2626;box-shadow:0 0 0 3px rgba(220,38,38,.24)}
 .eventFolderStatus.disconnected{background:rgba(220,38,38,.18);border-color:rgba(248,113,113,.72);color:#fff}
 @media (max-width:760px){.eventFolderStatus{order:3;width:100%;justify-content:center}.eventFolderText{overflow:hidden;text-overflow:ellipsis}}
-.formStack{display:flex;flex-direction:column;gap:14px;margin-top:0;}
+.formStack{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:0;}
+@media (max-width:760px){.modalUserPremium{width:calc(100vw - 20px);padding:16px}.formStack{grid-template-columns:1fr}.userFlowBlock .rowBetween{align-items:flex-start;flex-direction:column}.userFlowBlock .rowBetween .btn{width:100%;justify-content:center}}
 .rowBetween{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;}
 .hint.tiny{font-size:12px;opacity:.78;margin-top:6px;}
 .modalActions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;}
@@ -714,7 +723,7 @@ main{padding:14px;overflow-x:hidden}
       <div class="modalHd">
         <div>
           <div class="modalTitle" id="demandReprogramModalTitle">Reprogramar demanda</div>
-          <div class="modalSub" id="demandReprogramModalSub">Altere apenas a data e informe a justificativa (obrigatéria).</div>
+          <div class="modalSub" id="demandReprogramModalSub">Altere apenas o prazo final e informe a justificativa (obrigatória).</div>
         </div>
         <button class="btn ghost" id="demandReprogramModalClose" type="button">Fechar ×</button>
       </div>
@@ -846,26 +855,49 @@ main{padding:14px;overflow-x:hidden}
       <div class="modalHd modalUserHd">
         <div>
           <div class="modalTitle">Identificação do Usuário</div>
-          <div class="modalSub">Obrigatório para registrar autoria e evitar conflitos na consolidação.</div>
+          <div class="modalSub">Selecione a pasta de eventos para carregar usuários existentes ou criar um novo.</div>
         </div>
         <button class="btn ghost modalCloseBtn" id="userModalClose" type="button" aria-label="Fechar">×</button>
       </div>
 
       <div class="userWarningBox userWarningCompact" id="userWarningBox">
         <span class="pill">Obrigatório</span>
-        <div>Defina seu nome para habilitar criação/edição e <strong>Importar (Adicionar)</strong>.</div>
+        <div>Selecione a pasta ORIZONData para reutilizar usuários cadastrados e evitar duplicidade.</div>
+      </div>
+      <div class="userWarningBox userWarningCompact" id="userLocalWarning" style="display:none">
+        <span class="pill">Atenção</span>
+        <div>Usuário local não encontrado na pasta de eventos selecionada.</div>
       </div>
 
       <div class="formStack">
-        <div>
-          <label class="lbl">Nome completo</label>
-          <input id="userModalName" placeholder="Ex.: Arthur Basílio" maxlength="30">
-          <div class="hint tiny">Use seu nome como no crachá.</div>
+        <div class="userFlowBlock">
+          <div class="rowBetween">
+            <label class="lbl">1. Selecionar pasta de eventos</label>
+            <button class="btn small" type="button" id="btnUserSelectEventFolder">Selecionar pasta de eventos</button>
+          </div>
+          <div class="hint tiny" id="userFolderStatus">Nenhuma pasta selecionada. Selecione a pasta ORIZONData que contém a subpasta events.</div>
         </div>
 
-        <div>
+        <div class="userFlowBlock">
+          <label class="lbl">2. Usuário existente</label>
+          <select id="userExistingSelect" disabled>
+            <option value="">Selecione a pasta para carregar usuários</option>
+          </select>
+          <div class="hint tiny" id="userExistingHint">Usuários serão carregados a partir do snapshot e dos arquivos em events.</div>
+        </div>
+
+        <div class="userFlowBlock">
+          <label class="lbl">3. Criar novo usuário</label>
+          <label class="tiny" style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <input type="checkbox" id="userCreateMode" disabled> Criar novo usuário
+          </label>
+          <input id="userModalName" placeholder="Ex.: Arthur Basílio" maxlength="30" disabled>
+          <div class="hint tiny">Use seu nome como no crachá. Novo ID só é gerado ao criar usuário novo.</div>
+        </div>
+
+        <div class="userFlowBlock">
           <div class="rowBetween">
-            <label class="lbl">Seu ID (gerado automaticamente)</label>
+            <label class="lbl">4. Seu ID gerado automaticamente</label>
             <button class="btn ghost small" type="button" id="btnCopyUserId" title="Copiar ID">Copiar</button>
           </div>
           <input id="userModalId" disabled="">
@@ -1116,6 +1148,134 @@ main{padding:14px;overflow-x:hidden}
     const u = safeUUID() || uid();
     return `${idPrefix()}::${kind}::${u}`;
   };
+  const normalizeLegacyIdKind = (id, fromKind='id', toKind='resource') => {
+    const raw = String(id || '').trim();
+    if (!raw) return raw;
+    return raw.replace(`::${fromKind}::`, `::${toKind}::`);
+  };
+
+  const normalizedPersonName = (name) => String(name || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .trim().toLowerCase().replace(/\s+/g,' ');
+
+  const ownerFromLegacyResourceId = (id) => {
+    const raw = String(id || '').trim();
+    const match = raw.match(/^(.+)::(?:resource|id)::/);
+    const owner = String(match?.[1] || '').trim();
+    if (!owner || owner === 'unknown' || owner.startsWith('sessao-local__')) return '';
+    return owner;
+  };
+
+  const legacyOwnerFallbackForName = (name) => {
+    const slug = slugify(name) || 'recurso';
+    return `legacy-owner::${slug}`;
+  };
+
+  const normalizeLegacyResource = (resource, opts={}) => {
+    if (!resource || typeof resource !== 'object' || Array.isArray(resource)) return resource;
+    const out = { ...resource };
+    const originalId = String(out.id || '').trim();
+    if (originalId && originalId.includes('::id::')) {
+      out.id = normalizeLegacyIdKind(originalId, 'id', 'resource');
+      out.legacy_id = out.legacy_id || originalId;
+      out.migrated_id_kind = true;
+    }
+    const owner = String(out.owner_user_id || out.ownerUserId || '').trim();
+    if (!owner) {
+      const inferred = ownerFromLegacyResourceId(out.id || originalId)
+        || String(opts.ownerByName?.get(normalizedPersonName(out.nome)) || '').trim()
+        || legacyOwnerFallbackForName(out.nome || out.name || out.id || 'recurso');
+      out.owner_user_id = inferred;
+      out.migrated_owner_user_id = true;
+    } else {
+      out.owner_user_id = owner;
+    }
+    if (out.ownerUserId && out.ownerUserId !== out.owner_user_id) out.legacy_ownerUserId = out.ownerUserId;
+    delete out.ownerUserId;
+    return out;
+  };
+
+  const updateResourceReferencesForMigration = (obj, idMap) => {
+    if (!obj || !idMap || !idMap.size) return obj;
+    const mapVal = (v) => idMap.get(String(v || '')) || v;
+    for (const d of (Array.isArray(obj.demands) ? obj.demands : [])) {
+      if (d.responsavel_id) d.responsavel_id = mapVal(d.responsavel_id);
+      if (d.resourceId) d.resourceId = mapVal(d.resourceId);
+      if (Array.isArray(d.allocations)) d.allocations = d.allocations.map(a => ({ ...a, resourceId: mapVal(a.resourceId) }));
+    }
+    for (const b of (Array.isArray(obj.blockings) ? obj.blockings : [])) {
+      if (b.recurso_id) b.recurso_id = mapVal(b.recurso_id);
+      if (b.resourceId) b.resourceId = mapVal(b.resourceId);
+    }
+    for (const o of (Array.isArray(obj.overtimes) ? obj.overtimes : [])) {
+      if (o.resourceId) o.resourceId = mapVal(o.resourceId);
+      if (o.recurso_id) o.recurso_id = mapVal(o.recurso_id);
+    }
+    for (const ia of (Array.isArray(obj.internalActivities) ? obj.internalActivities : [])) {
+      if (ia.resourceId) ia.resourceId = mapVal(ia.resourceId);
+      if (ia.recurso_id) ia.recurso_id = mapVal(ia.recurso_id);
+    }
+    for (const ev of (Array.isArray(obj.events) ? obj.events : [])) {
+      const p = ev && ev.payload;
+      if (!p || typeof p !== 'object') continue;
+      if (p.id) p.id = mapVal(p.id);
+      if (p.resource_id) p.resource_id = mapVal(p.resource_id);
+      if (p.resourceId) p.resourceId = mapVal(p.resourceId);
+      if (p.responsavel_id) p.responsavel_id = mapVal(p.responsavel_id);
+    }
+    return obj;
+  };
+
+  const migrateLegacyResources = (obj) => {
+    const base = obj && typeof obj === 'object' ? obj : {};
+    const out = { ...base };
+    const ownerByName = new Map();
+    for (const r of (Array.isArray(base.resources) ? base.resources : [])) {
+      const owner = String(r?.owner_user_id || r?.ownerUserId || ownerFromLegacyResourceId(r?.id) || '').trim();
+      const key = normalizedPersonName(r?.nome);
+      if (key && owner && !ownerByName.has(key)) ownerByName.set(key, owner);
+    }
+    const idMap = new Map();
+    const byId = new Map();
+    const byNameOwner = new Map();
+    const resources = [];
+    let migrationChanged = false;
+    for (const raw of (Array.isArray(base.resources) ? base.resources : [])) {
+      const migrated = normalizeLegacyResource(raw, { ownerByName });
+      if (!migrated || !migrated.id) continue;
+      if (raw?.id && String(raw.id) !== String(migrated.id)) { idMap.set(String(raw.id), String(migrated.id)); migrationChanged = true; }
+      if (migrated.migrated_owner_user_id || migrated.migrated_id_kind) migrationChanged = true;
+      const id = String(migrated.id);
+      const nameOwnerKey = `${normalizedPersonName(migrated.nome)}|${String(migrated.owner_user_id || '')}`;
+      if (byId.has(id)) {
+        Object.assign(byId.get(id), { ...migrated, ...byId.get(id) });
+        continue;
+      }
+      if (nameOwnerKey !== '|' && byNameOwner.has(nameOwnerKey)) {
+        const kept = byNameOwner.get(nameOwnerKey);
+        kept.duplicate_resource_ids = [...new Set([...(kept.duplicate_resource_ids || []), id])];
+        idMap.set(id, kept.id);
+        migrationChanged = true;
+        continue;
+      }
+      byId.set(id, migrated);
+      byNameOwner.set(nameOwnerKey, migrated);
+      resources.push(migrated);
+    }
+    out.resources = resources;
+    updateResourceReferencesForMigration(out, idMap);
+    const duplicateNames = new Map();
+    for (const r of resources) {
+      const key = normalizedPersonName(r.nome);
+      if (!key) continue;
+      if (!duplicateNames.has(key)) duplicateNames.set(key, new Set());
+      duplicateNames.get(key).add(String(r.owner_user_id || ''));
+    }
+    const flagged = [...duplicateNames.entries()].filter(([, owners]) => owners.size > 1).map(([name, owners]) => ({ name, owners:[...owners] }));
+    out.meta = { ...(out.meta && typeof out.meta === 'object' ? out.meta : {}), duplicateUserNameDiagnostics: flagged };
+    if (migrationChanged) out.meta.legacyResourceMigrationAt = out.meta.legacyResourceMigrationAt || new Date().toISOString();
+    return out;
+  };
   const isWeekend = (d) => { const day = d.getDay(); return day === 0 || day === 6; };
   const getResourceHoursPerDay = (resource) => {
     if (!resource) return HOURS_PER_DAY;
@@ -1200,7 +1360,32 @@ main{padding:14px;overflow-x:hidden}
     return out;
   };
 
-  const normalizeDemandsV02 = (arr) => {
+  const relatedDemandReprogrammings = (demand, reprogrammings=[]) => {
+    const id = String(demand?.id || '').trim();
+    if (!id) return [];
+    return (Array.isArray(reprogrammings) ? reprogrammings : [])
+      .filter(rp => String(rp?.demanda_id || rp?.demandId || '') === id)
+      .sort((a,b) => Number(a?.timestamp || 0) - Number(b?.timestamp || 0));
+  };
+
+  const normalizeDemandBaseline = (demand, reprogrammings=[]) => {
+    if (!demand || typeof demand !== 'object' || Array.isArray(demand)) return demand;
+    const out = { ...demand };
+    const firstRp = relatedDemandReprogrammings(out, reprogrammings)[0] || {};
+    const baselineInicio = String(
+      out.baseline_inicio || out.baselineInicio || out.original_data_inicio || out.data_inicio_original ||
+      firstRp.inicio_original || firstRp.data_inicio_original || out.data_inicio || ''
+    ).trim();
+    const baselineFim = String(
+      out.baseline_fim || out.baselineFim || out.original_data_fim || out.data_fim_original || out.prazo_original ||
+      firstRp.prazo_anterior || firstRp.data_fim_anterior || firstRp.prazo_original || out.data_fim || ''
+    ).trim();
+    out.baseline_inicio = baselineInicio;
+    out.baseline_fim = baselineFim;
+    return out;
+  };
+
+  const normalizeDemandsV02 = (arr, reprogrammings=[]) => {
     const inList = Array.isArray(arr) ? arr : [];
     const grouped = new Map();
     const normTxt = (v='') => String(v || '')
@@ -1229,7 +1414,7 @@ main{padding:14px;overflow-x:hidden}
     ].join('|');
     for (const raw of inList) {
       if (!raw || typeof raw !== 'object') continue;
-      const d = { ...raw };
+      const d = normalizeDemandBaseline({ ...raw }, reprogrammings);
       const key = makeKey(d);
       const existing = grouped.get(key);
       const allocs = normalizeDemandAllocations(d);
@@ -1254,19 +1439,22 @@ main{padding:14px;overflow-x:hidden}
     return [...grouped.values()];
   };
 
-  const normalizeImportedState = (obj) => ({
-    ...defaultState(),
-    ...(obj && typeof obj === 'object' ? obj : {}),
-    schemaVersion: '0.2',
-    resources: Array.isArray(obj?.resources) ? obj.resources : [],
-    demands: normalizeDemandsV02(obj?.demands),
-    internalActivities: Array.isArray(obj?.internalActivities) ? obj.internalActivities : [],
-    blockings: Array.isArray(obj?.blockings) ? obj.blockings : [],
-    holidays: Array.isArray(obj?.holidays) ? obj.holidays : [],
-    reprogrammings: Array.isArray(obj?.reprogrammings) ? obj.reprogrammings : [],
-    overtimes: Array.isArray(obj?.overtimes) ? obj.overtimes : [],
-    events: Array.isArray(obj?.events) ? obj.events : [],
-  });
+  const normalizeImportedState = (obj) => {
+    const migrated = migrateLegacyResources(obj && typeof obj === 'object' ? obj : {});
+    return {
+      ...defaultState(),
+      ...migrated,
+      schemaVersion: '0.2',
+      resources: Array.isArray(migrated.resources) ? migrated.resources : [],
+      demands: normalizeDemandsV02(migrated.demands, migrated.reprogrammings),
+      internalActivities: Array.isArray(migrated.internalActivities) ? migrated.internalActivities : [],
+      blockings: Array.isArray(migrated.blockings) ? migrated.blockings : [],
+      holidays: Array.isArray(migrated.holidays) ? migrated.holidays : [],
+      reprogrammings: Array.isArray(migrated.reprogrammings) ? migrated.reprogrammings : [],
+      overtimes: Array.isArray(migrated.overtimes) ? migrated.overtimes : [],
+      events: Array.isArray(migrated.events) ? migrated.events : [],
+    };
+  };
 
   const parseSnapshotText = (txt) => {
     const obj = JSON.parse(String(txt||'{}'));
@@ -1699,13 +1887,6 @@ main{padding:14px;overflow-x:hidden}
   let dbBinding = loadDbMeta();
   let dbFileHandle = null;
   let dbLoadedSnapshot = loadDbBaseline();
-  let dbPathValue = localStorage.getItem(DB_PATH_KEY) || '';
-
-  const setDbPathValue = (value) => {
-    dbPathValue = String(value || '').trim();
-    localStorage.setItem(DB_PATH_KEY, dbPathValue);
-  };
-
   const setDbBinding = (meta, handle=null, loadedSnapshot=null) => {
     dbBinding = {
       mode: String(meta?.mode || 'none'),
@@ -1733,7 +1914,7 @@ main{padding:14px;overflow-x:hidden}
     if (!reason) return false;
     if (!/(v[ií]nculo|inv[aá]lid|permiss|arquivo|json|notfound|security|selecion)/i.test(reason)) return false;
     const mode = String(dbBinding?.mode || 'none');
-    return mode === 'rw' || !!dbBinding?.name || !!dbPathValue;
+    return mode === 'rw' || !!dbBinding?.name;
   };
 
   const clearOrizonLocalStorage = () => {
@@ -1753,6 +1934,7 @@ main{padding:14px;overflow-x:hidden}
         ) keys.push(key);
       }
       for (const key of keys) localStorage.removeItem(key);
+      clearDemandCreateDraft();
     } catch (e) {
       console.warn('[ORIZON Clear] Falha ao limpar localStorage:', e);
     }
@@ -1777,7 +1959,6 @@ main{padding:14px;overflow-x:hidden}
     dbFileHandle = null;
     dbLoadedSnapshot = null;
     dbBinding = { mode:'none', name:'', lastLoadedAt:'', writable:false, baselineHash:'', baselineLastModified:0, baselineSize:0 };
-    dbPathValue = '';
     capviewDataDirHandle = null;
     capviewEventsDirHandle = null;
     capviewSnapshotFileHandle = null;
@@ -2284,6 +2465,8 @@ main{padding:14px;overflow-x:hidden}
       trendTone,
       plannedDays,
       apontamentosCount: apontamentos.length,
+      windowSummary: demandApontamentoWindowSummary(demand, apontamentos),
+      windowClassification: demandWindowClassification(demand, apontamentos),
     };
   };
 
@@ -2384,9 +2567,72 @@ main{padding:14px;overflow-x:hidden}
     if (!normalizeProjectStep(etapa)) return 'Informe a etapa do projeto.';
     if (!Number.isFinite(horas) || horas <= 0) return 'Informe horas gastas maior que zero.';
     if (horas > 24) return 'Horas gastas não pode ser maior que 24h em um único apontamento.';
-    if (demand.data_inicio && data < demand.data_inicio) return 'A data do apontamento não pode ser anterior ao início planejado da demanda.';
-    if (demand.data_fim && data > demand.data_fim) return 'A data do apontamento não pode ser posterior ao fim planejado da demanda.';
     return '';
+  };
+
+  const apontamentoWindowFlags = (demand={}, apontamento={}) => {
+    const data = String(apontamento?.data || '').trim();
+    const start = String(demand?.data_inicio || '').trim();
+    const end = String(demand?.data_fim || '').trim();
+    return {
+      early: !!(isISODateString(data) && isISODateString(start) && data < start),
+      late: !!(isISODateString(data) && isISODateString(end) && data > end),
+    };
+  };
+
+  const demandApontamentoWindowSummary = (demand={}, apontamentosOverride=null) => {
+    const apontamentos = Array.isArray(apontamentosOverride) ? normalizeDemandApontamentos({ apontamentos: apontamentosOverride }) : normalizeDemandApontamentos(demand);
+    const early = apontamentos.filter(a => apontamentoWindowFlags(demand, a).early);
+    const late = apontamentos.filter(a => apontamentoWindowFlags(demand, a).late);
+    return {
+      earlyCount: early.length,
+      lateCount: late.length,
+      earlyHours: Math.round(early.reduce((acc,a)=>acc+Number(a.horas||0),0) * 100) / 100,
+      lateHours: Math.round(late.reduce((acc,a)=>acc+Number(a.horas||0),0) * 100) / 100,
+      hasEarly: early.length > 0,
+      hasLate: late.length > 0,
+    };
+  };
+
+  const diffDaysISO = (start, end) => {
+    const a = isoToLocalMidnight(start);
+    const b = isoToLocalMidnight(end);
+    if (!a || !b) return 0;
+    return Math.round((b.getTime() - a.getTime()) / 86400000);
+  };
+
+  const demandWindowClassification = (demand={}, apontamentosOverride=null) => {
+    const baselineStart = String(demand.baseline_inicio || demand.data_inicio || '').trim();
+    const baselineEnd = String(demand.baseline_fim || demand.data_fim || '').trim();
+    const currentStart = String(demand.data_inicio || '').trim();
+    const currentEnd = String(demand.data_fim || '').trim();
+    const summary = demandApontamentoWindowSummary(demand, apontamentosOverride);
+    const exceedsPlannedWindow = !!(isISODateString(baselineEnd) && isISODateString(currentEnd) && currentEnd > baselineEnd);
+    const startsAfterBaseline = !!(isISODateString(baselineStart) && isISODateString(currentStart) && currentStart > baselineStart);
+    const startsBeforeBaseline = !!(isISODateString(baselineStart) && isISODateString(currentStart) && currentStart < baselineStart);
+    const exceededDays = exceedsPlannedWindow ? Math.max(0, diffDaysISO(baselineEnd, currentEnd)) : 0;
+    const labels = [];
+    if (exceedsPlannedWindow) labels.push('Janela excedente do programado');
+    if (summary.hasEarly) labels.push('Execução antecipada');
+    if (summary.hasLate) labels.push('Execução fora do prazo atual');
+    return {
+      baselineStart,
+      baselineEnd,
+      currentStart,
+      currentEnd,
+      exceedsPlannedWindow,
+      exceededDays,
+      startsAfterBaseline,
+      startsBeforeBaseline,
+      hasEarlyExecution: summary.hasEarly,
+      hasLateExecution: summary.hasLate,
+      earlyCount: summary.earlyCount,
+      lateCount: summary.lateCount,
+      earlyHours: summary.earlyHours,
+      lateHours: summary.lateHours,
+      labels,
+      severity: (exceedsPlannedWindow || summary.hasLate) ? 'warn' : (summary.hasEarly ? 'info' : 'ok'),
+    };
   };
 
   const isoToLocalMidnight = (iso) => {
@@ -2443,6 +2689,76 @@ main{padding:14px;overflow-x:hidden}
     focusDemandsList: false,
     focusDemandsForm: false,
     prefillDemand: null, // { responsavel_id, data_inicio, data_fim }
+  };
+
+  const DEMAND_CREATE_DRAFT_KEY = 'capview_demand_create_draft_v1';
+
+  const normalizeDemandCreateDraft = (draft) => {
+    if (!draft || typeof draft !== 'object') return null;
+    const responsavelIds = Array.isArray(draft.responsavelIds)
+      ? [...new Set(draft.responsavelIds.map(id => String(id || '').trim()).filter(Boolean))]
+      : [];
+    const respPctById = {};
+    const pctSource = draft.respPctById && typeof draft.respPctById === 'object' ? draft.respPctById : {};
+    for (const rid of responsavelIds) {
+      const raw = Number(pctSource[rid] ?? 100);
+      respPctById[rid] = Number.isFinite(raw) ? raw : 100;
+    }
+    return {
+      titulo: String(draft.titulo || ''),
+      predio: String(draft.predio || ''),
+      focal: String(draft.focal || ''),
+      data_inicio: String(draft.data_inicio || ''),
+      data_fim: String(draft.data_fim || ''),
+      prioridade: String(draft.prioridade || 'Média'),
+      status: normalizeStatus(draft.status || (responsavelIds.length ? 'Em andamento' : 'Mapeada')),
+      observacoes: String(draft.observacoes || ''),
+      responsavelIds,
+      respPctById,
+      updatedAt: Number(draft.updatedAt || Date.now()),
+    };
+  };
+
+  const hasMeaningfulDemandCreateDraft = (draft) => {
+    const d = normalizeDemandCreateDraft(draft);
+    if (!d) return false;
+    return !!(
+      d.titulo.trim() ||
+      d.predio.trim() ||
+      d.focal.trim() ||
+      d.data_inicio ||
+      d.data_fim ||
+      d.observacoes.trim() ||
+      d.responsavelIds.length ||
+      d.prioridade !== 'Média' ||
+      d.status !== 'Mapeada'
+    );
+  };
+
+  const loadDemandCreateDraft = () => {
+    try {
+      const raw = sessionStorage.getItem(DEMAND_CREATE_DRAFT_KEY);
+      return raw ? normalizeDemandCreateDraft(JSON.parse(raw)) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const saveDemandCreateDraft = (draft) => {
+    try {
+      const normalized = normalizeDemandCreateDraft({ ...(draft || {}), updatedAt: Date.now() });
+      if (!hasMeaningfulDemandCreateDraft(normalized)) {
+        sessionStorage.removeItem(DEMAND_CREATE_DRAFT_KEY);
+        return;
+      }
+      sessionStorage.setItem(DEMAND_CREATE_DRAFT_KEY, JSON.stringify(normalized));
+    } catch (e) {
+      console.warn('[ORIZON Draft] Falha ao salvar rascunho da demanda:', e);
+    }
+  };
+
+  const clearDemandCreateDraft = () => {
+    try { sessionStorage.removeItem(DEMAND_CREATE_DRAFT_KEY); } catch {}
   };
 
   // Busca por título sem perder foco: evita render() a cada tecla de forma destrutiva.
@@ -2678,6 +2994,9 @@ main{padding:14px;overflow-x:hidden}
   const EVENT_OUTBOX_KEY = 'capview_event_outbox_v570';
   const EVENT_OUTBOX_MAX = 500;
   let capviewEventWriteInFlight = false;
+  let scannedEventUsers = [];
+  let scannedEventDiagnostics = [];
+
 
   // V5.8 ? Controle local de eventos já vistos/aplicados.
   // O snapshot pode ainda não estar consolidado; por isso o app continua
@@ -2883,6 +3202,69 @@ main{padding:14px;overflow-x:hidden}
     return !![...document.querySelectorAll('dialog[open]')].some(d => editingDialogIds.has(String(d.id || '')));
   };
 
+  const isUserEditingDemandCreateForm = () => {
+    const active = document.activeElement;
+    return !!(active && isEditableElement(active) && active.closest && active.closest('#demandsFormCard'));
+  };
+
+  const captureDemandCreateFocus = () => {
+    const active = document.activeElement;
+    if (!active || !active.closest || !active.closest('#demandsFormCard')) return null;
+    const field = String(active.getAttribute('data-demand-create-field') || '');
+    if (!field) return null;
+    const info = {
+      field,
+      rid: String(active.getAttribute('data-demand-create-rid') || ''),
+      value: String(active.value || ''),
+      start: null,
+      end: null,
+    };
+    try {
+      info.start = typeof active.selectionStart === 'number' ? active.selectionStart : null;
+      info.end = typeof active.selectionEnd === 'number' ? active.selectionEnd : null;
+    } catch {}
+    return info;
+  };
+
+  const findDemandCreateFocusTarget = (info) => {
+    if (!info || !info.field) return null;
+    const form = document.getElementById('demandsFormCard');
+    if (!form) return null;
+    const matches = [...form.querySelectorAll(`[data-demand-create-field="${info.field}"]`)];
+    if (info.rid) {
+      const byRid = matches.find(elm => String(elm.getAttribute('data-demand-create-rid') || '') === String(info.rid));
+      if (byRid) return byRid;
+    }
+    return matches[0] || null;
+  };
+
+  const restoreDemandCreateFocus = (info) => {
+    if (!info || !info.field) return;
+    setTimeout(() => {
+      const target = findDemandCreateFocusTarget(info);
+      if (!target) return;
+      try {
+        if (info.field === 'responsavelBusca') target.value = info.value || '';
+        target.focus();
+        if (typeof target.setSelectionRange === 'function') {
+          const len = String(target.value || '').length;
+          const start = Math.min(Number(info.start ?? len), len);
+          const end = Math.min(Number(info.end ?? start), len);
+          target.setSelectionRange(start, end);
+        }
+        if (info.field === 'responsavelBusca') {
+          try { target.dispatchEvent(new Event('input', { bubbles:true })); } catch {}
+        }
+      } catch {}
+    }, 0);
+  };
+
+  const renderPreservingDemandCreateFocus = () => {
+    const focusInfo = captureDemandCreateFocus();
+    render();
+    restoreDemandCreateFocus(focusInfo);
+  };
+
   const isUserEditingNow = () => {
     const active = document.activeElement;
     if (isEditableElement(active)) return true;
@@ -2891,7 +3273,25 @@ main{padding:14px;overflow-x:hidden}
   };
 
   const requestRenderSafely = (reason='autosync') => {
-    if (isUserEditingNow()) {
+    if (hasOpenEditingDialog()) {
+      capviewDeferredRenderPending = true;
+      capviewDeferredRenderReason = reason;
+      const now = Date.now();
+      if (now - capviewDeferredRenderToastAt > 12000) {
+        capviewDeferredRenderToastAt = now;
+        toast('Atualização recebida. A tela será atualizada ao finalizar a edição.');
+      }
+      setEventModeStatus('Atualização recebida, render adiado para preservar modal em edição.');
+      return false;
+    }
+    if (isUserEditingDemandCreateForm()) {
+      capviewDeferredRenderPending = false;
+      capviewDeferredRenderReason = '';
+      renderPreservingDemandCreateFocus();
+      setEventModeStatus('Atualização recebida e aplicada; rascunho da demanda preservado.');
+      return true;
+    }
+    if (isEditableElement(document.activeElement)) {
       capviewDeferredRenderPending = true;
       capviewDeferredRenderReason = reason;
       const now = Date.now();
@@ -3172,6 +3572,28 @@ main{padding:14px;overflow-x:hidden}
     ensureUserAsResource();
     updateAvatar();
   };
+  const resolveActiveUser = async ({ displayName='', userId:selectedUserId='', createNew=false } = {}) => {
+    const nm = String(displayName || '').trim();
+    const selectedId = String(selectedUserId || '').trim();
+    const validation = validateTextLimit(nm, 'Nome do usuário', INPUT_LIMITS.userName, { required:true });
+    if (validation) { toast(validation); return false; }
+    if (!sharedFolderReady()) { toast('Selecione a pasta de eventos antes de salvar o usuário.'); return false; }
+    if (!createNew && !selectedId) { toast('Selecione um usuário existente ou crie um novo.'); return false; }
+
+    const finalUser = createNew ? { displayName:nm, userId:(selectedId || previewUserIdentity(nm).userId) } : { displayName:nm, userId:selectedId };
+    userName = finalUser.displayName;
+    userId = finalUser.userId;
+    persistUserIdentity(finalUser);
+
+    try { await scanEventFolderUsers(); } catch {}
+    ensureUserAsResource({ repairedFromUserIdentity: !createNew });
+    await flushLocalEventOutbox();
+    try { await scanEventFolderUsers(); } catch {}
+    if (capviewEventMode.autoSyncEnabled !== false) setTimeout(() => eventAutoSyncTick('user-save'), 250);
+    updateAvatar();
+    return true;
+  };
+
 
   const demandAllocations = (demand) => {
     const allocs = normalizeDemandAllocations(demand);
@@ -3289,16 +3711,88 @@ main{padding:14px;overflow-x:hidden}
     return { ok:true };
   };
 
-  const ensureUserAsResource = () => {
+
+  const blockingResourceId = (blocking={}) => String(blocking.recurso_id || blocking.resourceId || '').trim();
+  const blockingStartDate = (blocking={}) => normalizeDateLikeToISO(blocking.data_inicio || blocking.start || blocking.dateStart || blocking.data || blocking.date || '');
+  const blockingEndDate = (blocking={}) => normalizeDateLikeToISO(blocking.data_fim || blocking.end || blocking.dateEnd || blocking.data || blocking.date || blockingStartDate(blocking));
+  const blockingDateLabel = (blocking={}) => {
+    const start = blockingStartDate(blocking);
+    const end = blockingEndDate(blocking) || start;
+    if (!start) return '-';
+    return end && end !== start ? `${formatDateBR(start)} - ${formatDateBR(end)}` : formatDateBR(start);
+  };
+  const blockingCoversDate = (blocking={}, resourceId='', dateStr='') => {
+    const rid = blockingResourceId(blocking);
+    if (!rid || rid !== String(resourceId || '').trim()) return false;
+    const start = blockingStartDate(blocking);
+    const end = blockingEndDate(blocking) || start;
+    const date = String(dateStr || '').trim();
+    return !!(start && end && date && date >= start && date <= end);
+  };
+  const addDaysISO = (iso, days=1) => {
+    const d = isoToLocalMidnight(iso);
+    if (!d) return '';
+    d.setDate(d.getDate() + Number(days || 0));
+    return formatDate(d);
+  };
+  const buildBlockingDisplayRows = (items=[]) => {
+    const list = (Array.isArray(items) ? items : []).slice().sort((a,b) => {
+      const ra = blockingResourceId(a);
+      const rb = blockingResourceId(b);
+      if (ra !== rb) return ra.localeCompare(rb);
+      const ta = String(a.tipo || '').trim();
+      const tb = String(b.tipo || '').trim();
+      if (ta !== tb) return ta.localeCompare(tb);
+      const da = blockingStartDate(a);
+      const db = blockingStartDate(b);
+      if (da !== db) return da.localeCompare(db);
+      return String(a.id||'').localeCompare(String(b.id||''));
+    });
+    const rows = [];
+    for (const b of list) {
+      const rid = blockingResourceId(b);
+      const start = blockingStartDate(b);
+      const end = blockingEndDate(b) || start;
+      const tipo = String(b.tipo || '').trim();
+      const last = rows[rows.length - 1];
+      const canMergeLegacyDaily = last && last.resourceId === rid && last.tipo === tipo && last.end && start && addDaysISO(last.end, 1) === start;
+      const isSingleDayLegacy = start && end === start && !b.data_inicio && !b.data_fim;
+      if (canMergeLegacyDaily && isSingleDayLegacy && last.isLegacyDailyGroup) {
+        last.end = end;
+        last.ids.push(b.id);
+        last.items.push(b);
+        continue;
+      }
+      rows.push({
+        id: b.id,
+        ids: [b.id],
+        items: [b],
+        resourceId: rid,
+        start,
+        end,
+        tipo,
+        observacao: b.obs || b.observacao || '',
+        isLegacyDailyGroup: isSingleDayLegacy,
+      });
+    }
+    return rows;
+  };
+
+  const ensureUserAsResource = (opts={}) => {
     try {
       if (!hasUser()) return false;
       const uid = String(userId || '').trim();
       if (!uid || uid.startsWith('sessao-local__')) return false;
-      const alreadyExists = (state.resources || []).some((r) => {
-        const ownerId = String(r?.owner_user_id || r?.ownerUserId || '').trim();
-        return ownerId === uid;
-      });
+      const resourceOwnerId = (r) => String(r?.owner_user_id || r?.ownerUserId || '').trim();
+      const alreadyExists = (state.resources || []).some((r) => resourceOwnerId(r) === uid);
       if (alreadyExists) return false;
+      const resourceAlreadyInEvents = (state.events || []).some((ev) => {
+        if (!ev || (ev.type !== 'ADD_RESOURCE' && ev.type !== 'UPDATE_RESOURCE')) return false;
+        return resourceOwnerId(ev.payload || {}) === uid;
+      });
+      const knownResourceInEventFolder = (scannedEventUsers || []).some(u => String(u.userId || '') === uid && String(u.resourceId || '').trim());
+      if (resourceAlreadyInEvents || knownResourceInEventFolder) return false;
+      if (capviewEventMode.enabled && !sharedFolderReady()) return false;
       const payload = {
         id: generateId('resource'),
         nome: String(userName || '').trim() || 'Usuário',
@@ -3307,6 +3801,7 @@ main{padding:14px;overflow-x:hidden}
         ativo: true,
         owner_user_id: uid,
         auto_created_from_user: true,
+        repaired_from_user_identity: !!opts.repairedFromUserIdentity,
       };
       try {
         dispatch('ADD_RESOURCE', payload);
@@ -3330,31 +3825,31 @@ main{padding:14px;overflow-x:hidden}
     if (!dlg) return;
     const nameInput = qs('#userModalName');
     const idInput = qs('#userModalId');
+    const existingSelect = qs('#userExistingSelect');
+    const createMode = qs('#userCreateMode');
+    const folderStatus = qs('#userFolderStatus');
     const currentName = userName || (qs('#userName')?.value || '');
     if (nameInput) nameInput.value = currentName;
-    const nm = String(currentName||'').trim();
-    if (nm) {
-      const u = previewUserIdentity(nm);
-      if (idInput) idInput.value = u.userId;
-    } else {
-      if (idInput) idInput.value = userId || '';
-    }
+    if (idInput) idInput.value = userId || '';
+    if (existingSelect && userId) existingSelect.value = userId;
+    if (createMode) createMode.checked = false;
+    if (folderStatus) folderStatus.textContent = sharedFolderReady()
+      ? `Pasta conectada: ${capviewEventMode.folderName || 'ORIZONData'}`
+      : 'Nenhuma pasta selecionada. Selecione a pasta ORIZONData que contém a subpasta events.';
     dlg.dataset.force = force ? '1' : '0';
     const must = (dlg.dataset.force === '1') && !hasUser();
     const btnClose = qs('#userModalClose');
     const btnCancel = qs('#userModalCancel');
-    const btnSave = qs('#userModalSave');
-    const locked = isUserIdentityLocked();
-    if (nameInput) {
-      nameInput.readOnly = locked;
-      nameInput.classList.toggle('locked', locked);
-      nameInput.title = locked ? 'Usuário bloqueado após cadastro' : '';
-    }
-    if (btnSave) { btnSave.disabled = locked; btnSave.style.opacity = locked ? '.55' : ''; }
     if (btnClose) { btnClose.disabled = must; btnClose.style.opacity = must ? '.45' : ''; }
     if (btnCancel) { btnCancel.disabled = must; btnCancel.style.opacity = must ? '.45' : ''; }
     document.body.classList.add('user-modal-open');
     openDialog(dlg);
+    setTimeout(() => {
+      try {
+        if (wireUserModal.refreshFolderUsers) wireUserModal.refreshFolderUsers();
+        if (wireUserModal.setCreateMode) wireUserModal.setCreateMode(false);
+      } catch {}
+    }, 0);
   };
 
   // V5.4.6 ? guard não-bloqueante para CRUD local.
@@ -3404,7 +3899,7 @@ main{padding:14px;overflow-x:hidden}
   };
 
   const resourceDeleteId = (payload) =>
-    String((payload && typeof payload === 'object') ? payload.id : payload || '');
+    normalizeLegacyIdKind(String((payload && typeof payload === 'object') ? payload.id : payload || ''), 'id', 'resource');
 
   const removeResourceCascade = (target, payload) => {
     const id = resourceDeleteId(payload);
@@ -3447,7 +3942,7 @@ main{padding:14px;overflow-x:hidden}
           didMutate = false;
           break;
         }
-        const stamped = applyCreateMeta(payload);
+        const stamped = applyCreateMeta(normalizeDemandBaseline(payload));
         state.demands.unshift(stamped);
         eventPayload = stamped;
         break;
@@ -3470,7 +3965,7 @@ main{padding:14px;overflow-x:hidden}
         break;
       case 'UPDATE_DEMAND': {
         const prev = (state.demands||[]).find(d => d.id === payload.id);
-        const stamped = applyUpdateMeta(payload, prev);
+        const stamped = applyUpdateMeta(normalizeDemandBaseline({ ...payload, baseline_inicio: payload.baseline_inicio || prev?.baseline_inicio, baseline_fim: payload.baseline_fim || prev?.baseline_fim }), prev);
         state.demands = state.demands.map(d => d.id === stamped.id ? stamped : d);
         eventPayload = stamped;
         break;
@@ -3487,9 +3982,8 @@ main{padding:14px;overflow-x:hidden}
         state.reprogrammings.push(rp);
         state.demands = state.demands.map(d => {
           if (d.id !== payload.demandId) return d;
-          const novoInicio = rp.novo_inicio || d.data_inicio || '';
           const novoFim = rp.novo_fim || rp.novo_prazo || d.data_fim || '';
-          return applyUpdateMeta({ ...d, data_inicio: novoInicio, data_fim: novoFim, reprogramacoes: (d.reprogramacoes||0) + 1 }, d);
+          return applyUpdateMeta({ ...d, data_fim: novoFim, reprogramacoes: (d.reprogramacoes||0) + 1 }, d);
         });
         eventPayload = { ...payload, reprogramming: rp };
         break;
@@ -3566,20 +4060,19 @@ main{padding:14px;overflow-x:hidden}
         case 'ADD_RESOURCE': rebuilt.resources.push(payload); break;
         case 'UPDATE_RESOURCE': rebuilt.resources = rebuilt.resources.map(r => r.id === payload.id ? payload : r); break;
         case 'DELETE_RESOURCE': removeResourceCascade(rebuilt, payload); break;
-        case 'ADD_DEMAND': rebuilt.demands.push(payload); break;
+        case 'ADD_DEMAND': rebuilt.demands.push(normalizeDemandBaseline(payload)); break;
         case 'ADD_INTERNAL_ACTIVITY': rebuilt.internalActivities.push(payload); break;
         case 'UPDATE_INTERNAL_ACTIVITY': rebuilt.internalActivities = rebuilt.internalActivities.map(x => x.id === payload.id ? payload : x); break;
         case 'DELETE_INTERNAL_ACTIVITY': rebuilt.internalActivities = rebuilt.internalActivities.filter(x => String(x.id) !== String(payload)); break;
-        case 'UPDATE_DEMAND': rebuilt.demands = rebuilt.demands.map(d => d.id === payload.id ? payload : d); break;
+        case 'UPDATE_DEMAND': rebuilt.demands = rebuilt.demands.map(d => d.id === payload.id ? normalizeDemandBaseline(payload) : d); break;
         case 'DELETE_DEMAND': rebuilt.demands = rebuilt.demands.filter(d => String(d.id) !== String(payload)); break;
         case 'DELETE_DEMANDS': rebuilt.demands = rebuilt.demands.filter(d => !demandMatchesDeletePayload(d, payload)); break;
         case 'REPROGRAM_DEMAND':
           rebuilt.reprogrammings.push(payload.reprogramming);
           rebuilt.demands = rebuilt.demands.map(d => {
             if (d.id !== payload.demandId) return d;
-            const novoInicio = payload.reprogramming.novo_inicio || d.data_inicio || '';
             const novoFim = payload.reprogramming.novo_fim || payload.reprogramming.novo_prazo || d.data_fim || '';
-            return { ...d, data_inicio: novoInicio, data_fim: novoFim, reprogramacoes: (d.reprogramacoes||0) + 1 };
+            return { ...d, data_fim: novoFim, reprogramacoes: (d.reprogramacoes||0) + 1 };
           });
           break;
         case 'ADD_BLOCKING': rebuilt.blockings.push(payload); break;
@@ -3601,10 +4094,11 @@ main{padding:14px;overflow-x:hidden}
   // ----------------------
   // V5.5.1 ? Eventos por usuário em pasta compartilhada
   // ----------------------
-  const eventSafeName = () => {
-    const base = String(userId || userName || 'sessao-local').trim() || 'sessao-local';
+  const eventSafeNameForIdentity = (identityId='', identityName='') => {
+    const base = String(identityId || identityName || 'sessao-local').trim() || 'sessao-local';
     return base.replace(/[^a-z0-9_.-]+/gi,'_').slice(0,80) || 'sessao-local';
   };
+  const eventSafeName = () => eventSafeNameForIdentity(userId, userName);
 
   const ensureEventUser = () => {
     if (!hasUser()) ensureNonBlockingUser();
@@ -3641,10 +4135,10 @@ main{padding:14px;overflow-x:hidden}
     return handle;
   };
 
-  const selectORIZONDataFolder = async () => {
+  const selectORIZONDataFolder = async (opts={}) => {
     try {
       if (!window.showDirectoryPicker) { toast('Seu navegador não permite selecionar pasta. Use Edge/Chrome atualizado.'); return false; }
-      ensureEventUser();
+      if (opts.requireUser !== false) ensureEventUser();
       const dir = await window.showDirectoryPicker({ mode:'readwrite' });
       if (!dir) return false;
       resetAppliedEventControl();
@@ -3656,7 +4150,7 @@ main{padding:14px;overflow-x:hidden}
       capviewEventMode.lastStatus = 'Pasta vinculada. Alterações seráo registradas em /events por usuário.';
       persistEventFolderMeta();
       await ensureEventFolderReady({ createSnapshotIfMissing:true });
-      await ensureUserEventFileInitialized();
+      if (opts.requireUser !== false) await ensureUserEventFileInitialized();
       try { stopDbWatcher(); } catch {}
       disableDbAutoSyncForEventMode();
       const flushed = await flushLocalEventOutbox();
@@ -3674,6 +4168,14 @@ main{padding:14px;overflow-x:hidden}
   };
 
   const getMyEventFileHandle = async () => ensureUserEventFileInitialized();
+  const getEventFileHandleForIdentity = async (identityId='', identityName='') => {
+    await ensureEventFolderReady({ createSnapshotIfMissing:true });
+    const safeName = eventSafeNameForIdentity(identityId, identityName);
+    const handle = await capviewEventsDirHandle.getFileHandle(safeName + '.json', { create:true });
+    const txt = await fileTextOrDefault(handle, '');
+    if (!String(txt || '').trim()) await writeJsonToFileHandle(handle, []);
+    return { handle, safeName };
+  };
 
   const readEventArrayFromHandle = async (handle) => {
     const txt = await fileTextOrDefault(handle, '[]');
@@ -3687,17 +4189,19 @@ main{padding:14px;overflow-x:hidden}
   };
 
   const writeSingleEventToUserFile = async (event) => {
-    const handle = await getMyEventFileHandle();
+    const targetUserId = String(event?.user_id || event?.userId || userId || '').trim();
+    const targetUserName = String(event?.user || event?.userName || userName || '').trim();
+    const { handle, safeName } = await getEventFileHandleForIdentity(targetUserId, targetUserName);
     const arr = await readEventArrayFromHandle(handle);
     if (!arr.some(e => String(e.id) === String(event.id))) {
-      arr.push({ ...event, status:'pending', sourceFile:eventSafeName() + '.json' });
+      arr.push({ ...event, status:'pending', sourceFile:safeName + '.json' });
       arr.sort((a,b) => Number(a.timestamp||0) - Number(b.timestamp||0));
       await writeJsonToFileHandle(handle, arr);
     }
     // Verificação pós-gravação: evita falso positivo se o navegador negar escrita.
     const check = await readEventArrayFromHandle(handle);
     if (!check.some(e => String(e.id) === String(event.id))) throw new Error('Evento não confirmado no arquivo do usuário.');
-    return true;
+    return safeName;
   };
 
   const flushLocalEventOutbox = async () => {
@@ -3706,15 +4210,18 @@ main{padding:14px;overflow-x:hidden}
     capviewEventWriteInFlight = true;
     const outbox = loadLocalEventOutbox();
     const writtenIds = [];
+    const writtenFiles = new Set();
     try {
       for (const ev of outbox) {
-        await writeSingleEventToUserFile(ev);
+        const safeName = await writeSingleEventToUserFile(ev);
+        if (safeName) writtenFiles.add(safeName + '.json');
         writtenIds.push(String(ev.id));
       }
       if (writtenIds.length) {
         forgetLocalEventsFromOutbox(writtenIds);
         capviewEventMode.lastWriteAt = new Date().toISOString();
-        setEventModeStatus('Outbox enviado para /events/' + eventSafeName() + '.json: ' + writtenIds.length + ' evento(s).');
+        const filesText = writtenFiles.size === 1 ? [...writtenFiles][0] : `${writtenFiles.size} arquivo(s) de usuário`;
+        setEventModeStatus('Outbox enviado para /events/' + filesText + ': ' + writtenIds.length + ' evento(s).');
       }
       return writtenIds.length;
     } catch (e) {
@@ -3765,9 +4272,95 @@ main{padding:14px;overflow-x:hidden}
     return all.filter(e => e && e.id && !seen.has(String(e.id)) && seen.add(String(e.id))).sort((a,b) => Number(a.timestamp||0) - Number(b.timestamp||0));
   };
 
+  const resourceUserRecord = (resource, source='snapshot') => {
+    const r = normalizeLegacyResource(resource || {});
+    const owner = String(r.owner_user_id || '').trim();
+    const name = String(r.nome || r.name || r.createdBy || '').trim();
+    if (!owner || !name) return null;
+    return { userId: owner, displayName: name, resourceId: String(r.id || ''), source, resource: r };
+  };
+  const displayNameFromEventFileSlug = (slug='') => String(slug || '')
+    .split(/[-_.]+/)
+    .filter(Boolean)
+    .map(part => part ? part.charAt(0).toUpperCase() + part.slice(1).toLowerCase() : '')
+    .join(' ')
+    .trim();
+  const userFromEventFilename = (filename='') => {
+    const base = String(filename || '').trim().replace(/\.json$/i, '');
+    const match = base.match(/^(.+?)__([a-z0-9]{4,})$/i);
+    if (!match) return null;
+    const displayName = displayNameFromEventFileSlug(match[1]);
+    if (!displayName) return null;
+    return { userId: base, displayName, source:'events.filename', sourceFile:String(filename || '').trim() };
+  };
+  const scanEventFolderUserFiles = async () => {
+    await ensureEventFolderReady({ createSnapshotIfMissing:true });
+    const users = [];
+    try {
+      for await (const [name, handle] of capviewEventsDirHandle.entries()) {
+        if (!handle || handle.kind !== 'file') continue;
+        if (!String(name || '').toLowerCase().endsWith('.json')) continue;
+        const user = userFromEventFilename(name);
+        if (user) users.push(user);
+      }
+    } catch (e) { console.warn('[ORIZON Usuários] Falha ao ler nomes dos arquivos de eventos:', e); }
+    return users;
+  };
+
+  const scanEventFolderUsers = async () => {
+    await ensureEventFolderReady({ createSnapshotIfMissing:true });
+    const snapshot = await readSnapshotFromEventFolder();
+    const sharedEvents = await readAllSharedEvents();
+    const fileUsers = await scanEventFolderUserFiles();
+    const fileUserIds = new Set(fileUsers.map(u => String(u?.userId || '').trim()).filter(Boolean));
+    const byId = new Map();
+    const add = (u, opts={}) => {
+      if (!u || !u.userId) return;
+      const id = String(u.userId).trim();
+      if (opts.requireEventFile && !fileUserIds.has(id)) return;
+      const prev = byId.get(id) || {};
+      byId.set(id, {
+        ...prev,
+        ...u,
+        userId: id,
+        displayName: String(u.displayName || prev.displayName || id).trim(),
+        sources: [...new Set([...(prev.sources || []), u.source || 'desconhecido'])]
+      });
+    };
+    for (const fileUser of fileUsers) add(fileUser);
+    for (const r of (snapshot.resources || [])) add(resourceUserRecord(r, 'snapshot.resources'), { requireEventFile:true });
+    for (const ev of sharedEvents) {
+      if (ev.user_id && ev.user) add({ userId: ev.user_id, displayName: ev.user, source: ev.sourceFile || 'events' }, { requireEventFile:true });
+      if ((ev.type === 'ADD_RESOURCE' || ev.type === 'UPDATE_RESOURCE') && ev.payload) add(resourceUserRecord(ev.payload, ev.sourceFile || ev.type), { requireEventFile:true });
+    }
+    for (const ev of (snapshot.events || [])) {
+      if (ev.user_id && ev.user) add({ userId: ev.user_id, displayName: ev.user, source:'snapshot.events' }, { requireEventFile:true });
+      if ((ev.type === 'ADD_RESOURCE' || ev.type === 'UPDATE_RESOURCE') && ev.payload) add(resourceUserRecord(ev.payload, 'snapshot.events.payload'), { requireEventFile:true });
+    }
+    const users = [...byId.values()].sort((a,b) => String(a.displayName).localeCompare(String(b.displayName), 'pt-BR'));
+    const byName = new Map();
+    for (const u of users) {
+      const key = normalizedPersonName(u.displayName);
+      if (!key) continue;
+      if (!byName.has(key)) byName.set(key, new Set());
+      byName.get(key).add(u.userId);
+    }
+    const diagnostics = [...byName.entries()]
+      .filter(([, ids]) => ids.size > 1)
+      .map(([name, ids]) => ({ type:'duplicate-name-distinct-users', name, userIds:[...ids] }));
+    scannedEventUsers = users;
+    scannedEventDiagnostics = diagnostics;
+    if (diagnostics.length) console.warn('[ORIZON Usuários] Mesmo nome com user_id diferente:', diagnostics);
+    return { users, diagnostics, snapshot, events: sharedEvents, fileUsers };
+  };
+
   const applySingleEventToState = (target, event) => {
     if (!target || !event) return target;
-    const type = event.type, payload = event.payload;
+    const type = event.type;
+    let payload = event.payload;
+    if ((type === 'ADD_RESOURCE' || type === 'UPDATE_RESOURCE') && payload && typeof payload === 'object') payload = normalizeLegacyResource(payload);
+    if (type === 'DELETE_RESOURCE' && payload && typeof payload === 'object' && payload.id) payload = { ...payload, id: normalizeLegacyIdKind(payload.id, 'id', 'resource') };
+    else if (type === 'DELETE_RESOURCE' && typeof payload === 'string') payload = normalizeLegacyIdKind(payload, 'id', 'resource');
     const upsert = (arr, item) => {
       if (!item || !item.id) return Array.isArray(arr) ? arr : [];
       const base = Array.isArray(arr) ? arr : [];
@@ -3776,7 +4369,7 @@ main{padding:14px;overflow-x:hidden}
     switch (type) {
       case 'ADD_RESOURCE': case 'UPDATE_RESOURCE': target.resources = upsert(target.resources, payload); break;
       case 'DELETE_RESOURCE': removeResourceCascade(target, payload); break;
-      case 'ADD_DEMAND': case 'UPDATE_DEMAND': target.demands = upsert(target.demands, payload); break;
+      case 'ADD_DEMAND': case 'UPDATE_DEMAND': target.demands = upsert(target.demands, normalizeDemandBaseline(payload)); break;
       case 'ADD_INTERNAL_ACTIVITY': case 'UPDATE_INTERNAL_ACTIVITY': target.internalActivities = upsert(target.internalActivities, payload); break;
       case 'DELETE_INTERNAL_ACTIVITY': target.internalActivities = (target.internalActivities||[]).filter(x => String(x.id) !== String(payload)); break;
       case 'DELETE_DEMAND': target.demands = (target.demands||[]).filter(d => String(d.id) !== String(payload)); break;
@@ -3786,7 +4379,7 @@ main{padding:14px;overflow-x:hidden}
         target.demands = (target.demands||[]).map(d => {
           if (String(d.id) !== String(payload?.demandId)) return d;
           const rp = payload.reprogramming || {};
-          return { ...d, data_inicio: rp.novo_inicio || d.data_inicio || '', data_fim: rp.novo_fim || rp.novo_prazo || d.data_fim || '', reprogramacoes: (d.reprogramacoes||0) + 1 };
+          return { ...d, data_fim: rp.novo_fim || rp.novo_prazo || d.data_fim || '', reprogramacoes: (d.reprogramacoes||0) + 1 };
         });
         break;
       }
@@ -3804,7 +4397,7 @@ main{padding:14px;overflow-x:hidden}
   };
 
   const eventPayloadId = (payload) =>
-    String((payload && typeof payload === 'object') ? (payload.id || payload.demandId || payload.resource_id || payload.resourceId || '') : payload || '');
+    normalizeLegacyIdKind(String((payload && typeof payload === 'object') ? (payload.id || payload.demandId || payload.resource_id || payload.resourceId || '') : payload || ''), 'id', 'resource');
 
   const applyDeleteTombstonesFromEvents = (target, events) => {
     if (!target || !Array.isArray(events)) return target;
@@ -3841,6 +4434,35 @@ main{padding:14px;overflow-x:hidden}
     }
     for (const id of deletedResourceIds) removeResourceCascade(target, { id });
     return target;
+  };
+
+  const eventIdsSet = (events=[]) => new Set((Array.isArray(events) ? events : []).map(e => String(e?.id || '')).filter(Boolean));
+
+  const pendingEventsNotInSnapshot = (snapshot, events) => {
+    const inSnapshot = eventIdsSet(snapshot?.events || []);
+    return (Array.isArray(events) ? events : []).filter(e => e && e.id && !inSnapshot.has(String(e.id)));
+  };
+
+  const rebuildSnapshotFromEvents = (snapshot, events, opts={}) => {
+    const baseSnapshot = normalizeImportedState(snapshot || defaultState());
+    const allEvents = mergeEventListsUnique(baseSnapshot.events || [], events || []);
+    const base = normalizeImportedState({
+      ...defaultState(),
+      resources: opts.preserveSnapshotResources === false ? [] : (baseSnapshot.resources || []),
+      holidays: baseSnapshot.holidays || [],
+      events: []
+    });
+    for (const ev of allEvents) applySingleEventToState(base, ev);
+    applyDeleteTombstonesFromEvents(base, allEvents);
+    base.demands = dedupeLikelyDuplicateDemands(base.demands);
+    base.events = allEvents;
+    base.meta = {
+      ...(baseSnapshot.meta && typeof baseSnapshot.meta === 'object' ? baseSnapshot.meta : {}),
+      rebuiltFromEventsAt: new Date().toISOString(),
+      rebuiltEventCount: allEvents.length,
+      pendingEventsBeforeRebuild: pendingEventsNotInSnapshot(baseSnapshot, allEvents).length,
+    };
+    return normalizeImportedState(base);
   };
 
   const buildStateFromSnapshotAndEvents = (snapshot, events) => {
@@ -3924,7 +4546,8 @@ main{padding:14px;overflow-x:hidden}
       const snapshot = await readSnapshotFromEventFolder();
       const sharedEvents = await readAllSharedEvents();
       const events = mergeEventListsUnique(sharedEvents, loadLocalEventOutbox());
-      const { merged, pending } = buildStateFromSnapshotAndEvents(snapshot, events);
+      const pending = pendingEventsNotInSnapshot(snapshot, events);
+      const merged = rebuildSnapshotFromEvents(snapshot, events, { preserveSnapshotResources:true });
       markAppliedEvents(merged.events || []);
       merged.meta = { ...(merged.meta && typeof merged.meta === 'object' ? merged.meta : {}), consolidatedAt: new Date().toISOString(), consolidatedBy: userName || '', consolidatedById: userId || '', consolidatedEventCount: (merged.events||[]).length };
       await writeJsonToFileHandle(capviewSnapshotFileHandle, normalizeImportedState(merged));
@@ -4051,7 +4674,7 @@ main{padding:14px;overflow-x:hidden}
     },
 
     blockingFor(resourceId, dateStr) {
-      return (state.blockings || []).find(b => b.recurso_id === resourceId && b.data === dateStr);
+      return (state.blockings || []).find(b => blockingCoversDate(b, resourceId, dateStr));
     },
 
     overtimeInfo(resourceId, dateStr) {
@@ -4874,14 +5497,17 @@ main{padding:14px;overflow-x:hidden}
       const allocValidation = validateDemandAllocationLimits(allocations);
       if (!allocValidation.ok) { toast(allocValidation.msg); return; }
       const primaryResponsavelId = allocations[0]?.resourceId || '';
+      const latestDemand = (state.demands || []).find(d => String(d.id) === String(demand.id)) || demand;
       const next = {
-        ...demand,
+        ...latestDemand,
         titulo: titleVal,
         predio: predioVal,
         focal: focalVal,
         responsavel_id: (nextStatus === 'Mapeada') ? '' : primaryResponsavelId,
         data_inicio: iniVal,
         data_fim: fimVal,
+        baseline_inicio: latestDemand.baseline_inicio || latestDemand.data_inicio || iniVal,
+        baseline_fim: latestDemand.baseline_fim || latestDemand.data_fim || fimVal,
         percentual_diario: Number(allocations[0]?.percentual_diario || 0),
         allocations,
         prioridade: prioridade.value,
@@ -4947,7 +5573,7 @@ main{padding:14px;overflow-x:hidden}
   };
 
   // ----------------------
-  // Reprogramar Demanda (modal: nova data de início + fim + justificativa obrigatéria)
+  // Reprogramar Demanda (modal: novo prazo final + justificativa obrigatória)
   // ----------------------
 
   const openDemandStagesModal = (demand) => {
@@ -4998,11 +5624,17 @@ main{padding:14px;overflow-x:hidden}
 
       const list = el('div', { style:'display:flex;flex-direction:column;gap:8px;margin-top:8px' });
       for (const a of [...apontamentos].reverse().slice(0, 8)) {
+        const flags = apontamentoWindowFlags(demand, a);
+        const windowBadges = [
+          flags.early ? el('span', { class:'pill warn', title:'Apontamento antes da data de início planejada.' }, ['Execução antecipada']) : null,
+          flags.late ? el('span', { class:'pill bad', title:'Apontamento depois do prazo atual da demanda.' }, ['Fora do prazo']) : null,
+        ].filter(Boolean);
         list.appendChild(el('div', { style:'border:1px solid var(--border);border-radius:14px;padding:10px 12px;background:#fff' }, [
           el('div', { style:'display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap' }, [
             el('div', {}, [
               el('div', { style:'font-weight:950' }, [`${formatDateBR(a.data)} - ${a.etapa}`]),
-              el('div', { class:'mono', style:'font-weight:950;margin-top:2px' }, [`${fmtHours(a.horas || 0)}h`])
+              el('div', { class:'mono', style:'font-weight:950;margin-top:2px' }, [`${fmtHours(a.horas || 0)}h`]),
+              windowBadges.length ? el('div', { class:'row', style:'gap:6px;flex-wrap:wrap;margin-top:6px' }, windowBadges) : null
             ]),
             el('div', { class:'row', style:'gap:6px;flex-wrap:nowrap' }, [
               iconButton('Editar', '✎', '', () => {
@@ -5101,7 +5733,8 @@ main{padding:14px;overflow-x:hidden}
         el('b', {}, [demand.titulo || 'Demanda']),
         el('div', { class:'tiny muted', style:'margin-top:4px' }, [
           `${formatDateBR(demand.data_inicio)} -> ${formatDateBR(demand.data_fim)} - ${demand.prioridade || 'Media'} - ${effectiveStatus(demand)}`
-        ])
+        ]),
+        el('div', { class:'tiny muted', style:'margin-top:4px' }, ['Apontamentos antes do início planejado são permitidos e contabilizados como execução antecipada.'])
       ]),
       el('div', { class:'field', style:'border:1px solid var(--border);border-radius:18px;padding:14px;background:#fff' }, [
         el('label', {}, ['Etapas do projeto / apontamento real']),
@@ -5128,17 +5761,38 @@ main{padding:14px;overflow-x:hidden}
     if (!dlg || !demand) return;
 
     qs('#demandReprogramModalTitle').textContent = `Reprogramar demanda - ${demand.titulo}`;
-    qs('#demandReprogramModalSub').textContent = 'Altere apenas as datas e informe a justificativa (obrigatéria).';
+    qs('#demandReprogramModalSub').textContent = 'Altere apenas o prazo final e informe a justificativa (obrigatória).';
 
     const body = qs('#demandReprogramModalBody');
     body.innerHTML = '';
 
-    const novaIni = el('input', { type:'date', value: demand.data_inicio || '', min:`${MIN_APP_YEAR}-01-01`, max:`${MAX_APP_YEAR}-12-31` });
+    const inicioAtual = String(demand.data_inicio || '').trim();
+    const baselineInicio = String(demand.baseline_inicio || demand.data_inicio || '').trim();
+    const baselineFim = String(demand.baseline_fim || demand.data_fim || '').trim();
+    const prazoAtual = String(demand.data_fim || '').trim();
+    const novaIni = el('input', { type:'date', value: inicioAtual, disabled:'true', title:'A data de início não é alterada na reprogramação.' });
     const novaFim = el('input', { type:'date', value: demand.data_fim || '', min:`${MIN_APP_YEAR}-01-01`, max:`${MAX_APP_YEAR}-12-31` });
-    const just = el('textarea', { placeholder:'Justificativa (obrigatéria)...', maxlength:String(INPUT_LIMITS.justification), style:'min-height:92px' });
+    const just = el('textarea', { placeholder:'Justificativa (obrigatória)...', maxlength:String(INPUT_LIMITS.justification), style:'min-height:92px' });
 
-    const dateErr = el('div', { class:'inlineError', style:'display:none' }, ['Verifique as datas: início e fim são obrigatórios e o fim não pode ser anterior ao início.']);
+    const dateErr = el('div', { class:'inlineError', style:'display:none' }, ['Verifique o prazo final: ele é obrigatório e não pode ser anterior ao início atual.']);
     const justErr = el('div', { class:'inlineError', style:'display:none' }, ['Informe uma justificativa para confirmar a reprogramação.']);
+    const formatSignedDays = (days) => {
+      const n = Number(days || 0);
+      if (!Number.isFinite(n) || n === 0) return 'sem alteração de dias';
+      return `${n > 0 ? '+' : ''}${n} dia(s)`;
+    };
+    const daysBetweenSafe = (start, end) => (isISODateString(start) && isISODateString(end)) ? diffDaysISO(start, end) : 0;
+    const currentOverOriginal = Math.max(0, daysBetweenSafe(baselineFim, prazoAtual));
+    const summaryCard = (label, main, hint='', tone='') => el('div', {
+      style:`border:1px solid ${tone==='danger'?'var(--danger-border)':'var(--border)'};border-radius:14px;padding:10px 12px;background:${tone==='danger'?'var(--danger-soft)':'var(--surface)'};min-width:0`
+    }, [
+      el('div', { class:'tiny muted', style:'font-weight:900' }, [label]),
+      el('div', { class:'mono', style:'font-weight:950;margin-top:4px;line-height:1.25' }, [main]),
+      hint ? el('div', { class:'tiny muted', style:'margin-top:4px' }, [hint]) : null
+    ]);
+    const impactOriginal = el('div', { class:'mono', style:'font-weight:950;line-height:1.25' }, ['-']);
+    const impactCurrent = el('div', { class:'mono', style:'font-weight:950;line-height:1.25' }, ['-']);
+    const impactHint = el('div', { class:'tiny muted', style:'margin-top:4px;line-height:1.35' }, ['Informe o novo prazo final para ver o impacto em dias.']);
 
     const setInvalid = (fieldEl, ok) => {
       const wrap = fieldEl.closest('.field');
@@ -5146,13 +5800,12 @@ main{padding:14px;overflow-x:hidden}
     };
 
     const validateDates = () => {
-      const ini = (novaIni.value || '').trim();
+      const ini = inicioAtual;
       const fim = (novaFim.value || '').trim();
       let ok = true;
       const dateValidation = validateDateRangeLimits(ini, fim, { allowEmpty:false, label:'Reprogramação' });
       if (dateValidation) ok = false;
-      dateErr.textContent = dateValidation || 'Verifique as datas: início e fim são obrigatórios e o fim não pode ser anterior ao início.';
-      setInvalid(novaIni, ok);
+      dateErr.textContent = dateValidation || 'Verifique o prazo final: ele é obrigatório e não pode ser anterior ao início atual.';
       setInvalid(novaFim, ok);
       dateErr.style.display = ok ? 'none' : 'block';
       return ok;
@@ -5172,8 +5825,7 @@ main{padding:14px;overflow-x:hidden}
       const okDates = validateDates();
       const okJust = validateJust();
       if (!okDates) {
-        if (!novaIni.value) novaIni.focus();
-        else if (!novaFim.value) novaFim.focus();
+        novaFim.focus();
         return;
       }
       if (!okJust) {
@@ -5185,7 +5837,9 @@ main{padding:14px;overflow-x:hidden}
         id: generateId(),
         demanda_id: demand.id,
         data: formatDate(new Date()),
-        novo_inicio: novaIni.value,
+        inicio_original: baselineInicio || inicioAtual,
+        prazo_original: baselineFim || demand.data_fim || '',
+        prazo_anterior: demand.data_fim || '',
         novo_fim: novaFim.value,
         // compatibilidade com snapshots antigos
         novo_prazo: novaFim.value,
@@ -5201,22 +5855,39 @@ main{padding:14px;overflow-x:hidden}
       toast('Demanda reprogramada.');
     });
 
-    // Come?a bloqueado ate preencher justificativa + datas validas
+    // Começa bloqueado até preencher justificativa + prazo válido
     confirmBtn.disabled = true;
 
+    const refreshImpact = () => {
+      const nextFim = String(novaFim.value || '').trim();
+      if (!isISODateString(nextFim)) {
+        impactOriginal.textContent = '-';
+        impactCurrent.textContent = '-';
+        impactHint.textContent = 'Informe o novo prazo final para ver o impacto em dias.';
+        return;
+      }
+      const originalDelta = daysBetweenSafe(baselineFim, nextFim);
+      const currentDelta = daysBetweenSafe(prazoAtual, nextFim);
+      impactOriginal.textContent = `${formatSignedDays(originalDelta)} vs. prazo original`;
+      impactCurrent.textContent = `${formatSignedDays(currentDelta)} vs. prazo atual`;
+      impactHint.textContent = originalDelta > 0
+        ? `A demanda ficará ${originalDelta} dia(s) além do fim originalmente programado.`
+        : 'O novo prazo não ultrapassa o fim originalmente programado.';
+    };
+
     const refreshConfirmState = () => {
-      const ini = (novaIni.value || '').trim();
+      const ini = inicioAtual;
       const fim = (novaFim.value || '').trim();
       const okDates = !validateDateRangeLimits(ini, fim, { allowEmpty:false, label:'Reprogramação' });
       const okJust = !validateTextLimit(just.value, 'Justificativa', INPUT_LIMITS.justification, { required:true });
+      refreshImpact();
       confirmBtn.disabled = !(okDates && okJust);
     };
 
     const onInput = () => {
       // se usuario ja interagiu, mostra erro conforme necessario
-      const ini = (novaIni.value || '').trim();
       const fim = (novaFim.value || '').trim();
-      if (ini && fim) validateDates();
+      if (inicioAtual && fim) validateDates();
       else dateErr.style.display = 'none';
 
       if ((just.value || '').trim()) { setInvalid(just, true); justErr.style.display = 'none'; }
@@ -5224,25 +5895,34 @@ main{padding:14px;overflow-x:hidden}
       refreshConfirmState();
     };
 
-    novaIni.addEventListener('input', onInput);
     novaFim.addEventListener('input', onInput);
     just.addEventListener('input', onInput);
 
     // estado inicial
     refreshConfirmState();
 
-    const footer = el('div', { class:'row', style:'justify-content:flex-end;gap:10px;margin-top:10px' }, [
+    const footer = el('div', { class:'row', style:'justify-content:flex-end;gap:10px;margin-top:4px;width:100%' }, [
       button('Cancelar', '', () => { try { dlg.close(); } catch { dlg.removeAttribute('open'); } }),
       confirmBtn,
     ]);
 
-    body.appendChild(el('div', { class:'grid' }, [
-      el('div', { class:'row' }, [
-        el('div', { class:'field', style:'flex:1' }, [el('label', {}, ['Nova data (início)']), novaIni]),
-        el('div', { class:'field', style:'flex:1' }, [el('label', {}, ['Nova data (fim)']), novaFim]),
+    body.appendChild(el('div', { class:'grid', style:'gap:14px' }, [
+      el('div', { style:'display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:stretch' }, [
+        summaryCard('Programado original', `${formatDateBR(baselineInicio)} → ${formatDateBR(baselineFim)}`, 'Base usada no Avanço da janela.'),
+        summaryCard('Prazo atual', `${formatDateBR(inicioAtual)} → ${formatDateBR(prazoAtual)}`, currentOverOriginal ? `${currentOverOriginal} dia(s) além do programado.` : 'Ainda dentro do prazo original.', currentOverOriginal ? 'danger' : '')
       ]),
-      el('div', { class:'field' }, [dateErr]),
-      el('div', { class:'field' }, [el('label', {}, ['Justificativa (obrigatéria)']), just, justErr]),
+      el('div', { style:'border:1px solid var(--danger-border);border-radius:14px;padding:12px;background:var(--danger-soft);display:grid;gap:4px' }, [
+        el('div', { class:'tiny muted', style:'font-weight:900' }, ['Impacto calculado ao vivo']),
+        impactOriginal,
+        impactCurrent,
+        impactHint
+      ]),
+      el('div', { style:'display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start' }, [
+        el('div', { class:'field', style:'min-width:0' }, [el('label', {}, ['Data de início (não altera)']), novaIni, el('div', { class:'hint tiny' }, ['A reprogramação mantém o início original.'])]),
+        el('div', { class:'field', style:'min-width:0' }, [el('label', {}, ['Novo prazo final']), novaFim]),
+      ]),
+      el('div', { class:'field', style:'margin-top:-6px' }, [dateErr]),
+      el('div', { class:'field' }, [el('label', {}, ['Justificativa (obrigatória)']), just, justErr]),
       footer
     ]));
 
@@ -5479,7 +6159,7 @@ main{padding:14px;overflow-x:hidden}
     return el('span', { class:`statusPill s-${key}`, title: title || undefined }, children);
   };
 
-  const button = (label, cls, onClick) => el('button', { class:'btn '+(cls||''), type:'button', onclick:onClick }, [label]);
+  const button = (label, cls, onClick, attrs={}) => el('button', { class:'btn '+(cls||''), type:'button', onclick:onClick, ...(attrs || {}) }, [label]);
   const iconButton = (label, icon, cls, onClick) => el('button', {
     class:'btn iconBtn '+(cls||''),
     type:'button',
@@ -6294,15 +6974,25 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
       if (!a || !b) return 0;
       return Math.max(1, Math.floor((b.getTime() - a.getTime()) / 86400000) + 1);
     };
-    const elapsedWindowPct = (demand) => {
-      const start = demand?.data_inicio || '';
-      const end = demand?.data_fim || '';
+    const elapsedWindowPct = (range) => {
+      const start = range?.data_inicio || range?.start || '';
+      const end = range?.data_fim || range?.end || '';
       if (!isISODateString(start) || !isISODateString(end)) return 0;
       if (now < start) return 0;
       if (now > end) return 100;
       const total = daysInclusive(start, end);
       const elapsed = daysInclusive(start, now);
       return total ? clamp((elapsed / total) * 100) : 0;
+    };
+    const reprogrammedWindowPct = (classification={}) => {
+      const start = String(classification.baselineEnd || '').trim();
+      const end = String(classification.currentEnd || '').trim();
+      if (!classification.exceedsPlannedWindow || !isISODateString(start) || !isISODateString(end) || end <= start) return 0;
+      if (now <= start) return 0;
+      if (now >= end) return 100;
+      const total = Math.max(1, diffDaysISO(start, end));
+      const elapsed = Math.max(0, diffDaysISO(start, now));
+      return clamp((elapsed / total) * 100);
     };
     const remainingDaysLabel = (demand) => {
       if (!demand?.data_fim || !isISODateString(demand.data_fim)) return '';
@@ -6321,25 +7011,32 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
       if (!metrics.plannedHours) return { label:'Sem base planejada', tone:'neutral', hint:'Demanda sem horas planejadas calculáveis.' };
       if (metrics.realHours > metrics.plannedHours) return { label:'Acima do planejado', tone:'danger', hint:'Horas realizadas já superaram as horas planejadas.' };
       if (isExpired && realPct < 100) return { label:'Prazo vencido', tone:'danger', hint:'Janela encerrada com execução real abaixo do planejado.' };
-      if (windowPct >= 70 && realPct < 40) return { label:'Atenção ao andamento', tone:'warn', hint:'A janela avanãou mais que a execução real apontada.' };
+      if (windowPct >= 70 && realPct < 40) return { label:'Atenção ao andamento', tone:'warn', hint:'A janela avançou mais que a execução real apontada.' };
       if (realPct >= 90) return { label:'Próximo do limite', tone:'warn', hint:'Consumo de horas já está próximo do planejado.' };
       if (realPct > windowPct + 25) return { label:'Consumo acelerado', tone:'warn', hint:'Execução real está consumindo horas mais rápido que a janela.' };
-      if (realPct > 0) return { label:'Dentro do planejado', tone:'ok', hint:'Execução real compatével com a janela planejada.' };
+      if (realPct > 0) return { label:'Dentro do planejado', tone:'ok', hint:'Execução real compatível com a janela planejada.' };
       return { label:'Não iniciado', tone:'neutral', hint:'Sem apontamentos reais registrados para a demanda.' };
     };
 
     const projects = (dashboardFilteredDemands || []).map(d => {
       const metrics = demandExecutionMetrics(d);
       const apontamentos = normalizeDemandApontamentos(d);
-      const windowPct = elapsedWindowPct(d);
-      const health = projectHealth(metrics, windowPct, d);
+      const windowClassification = demandWindowClassification(d, apontamentos);
+      const plannedWindowPct = elapsedWindowPct({
+        data_inicio: windowClassification.baselineStart || d.data_inicio,
+        data_fim: windowClassification.baselineEnd || d.data_fim,
+      });
+      const reprogrammedPct = reprogrammedWindowPct(windowClassification);
+      const windowPct = plannedWindowPct;
+      const health = projectHealth(metrics, plannedWindowPct, d);
       const remainingBalance = Number(metrics.plannedHours || 0) - Number(metrics.realHours || 0);
       const etapasUnicas = new Set(apontamentos.map(a => normalizeProjectStep(a.etapa)).filter(Boolean)).size;
       const lastStep = apontamentos.slice().sort((a,b) =>
         String(b.data||'').localeCompare(String(a.data||'')) || Number(b.created_at||0)-Number(a.created_at||0)
       )[0] || null;
       const stepBadges = [...new Set(apontamentos.map(a => normalizeProjectStep(a.etapa)).filter(Boolean))].slice(0,6);
-      return { demand:d, metrics, apontamentos, windowPct, health, remainingBalance, etapasUnicas, lastStep, stepBadges, remainingDays: remainingDaysLabel(d) };
+      const windowSummary = demandApontamentoWindowSummary(d, apontamentos);
+      return { demand:d, metrics, apontamentos, windowPct, plannedWindowPct, reprogrammedPct, health, remainingBalance, etapasUnicas, lastStep, stepBadges, windowSummary, windowClassification, remainingDays: remainingDaysLabel(d) };
     }).sort((a,b) => {
       const toneWeight = { danger:0, warn:1, neutral:2, ok:3 };
       return (toneWeight[a.health.tone] ?? 9) - (toneWeight[b.health.tone] ?? 9) || String(a.demand.data_fim||'').localeCompare(String(b.demand.data_fim||''));
@@ -6362,8 +7059,13 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
       el('div', { class:'tiny muted', style:'margin-top:3px' }, [hint])
     ]);
 
-    const progressBar = (pct, title) => el('div', { class:'bar', title }, [
+    const progressBar = (pct, title, tone='') => el('div', { class:`bar${tone ? ' ' + tone : ''}`, title }, [
       el('span', { style:`width:${clamp(pct).toFixed(0)}%` })
+    ]);
+    const progressRow = (label, pct, subtitle, title, tone='') => el('div', { class:'grid', style:'gap:4px' }, [
+      el('div', { class:'row', style:'justify-content:space-between' }, [el('div', { class:'tiny muted' }, [label]), el('div', { class:'tiny mono' }, [pctText(pct)])]),
+      subtitle ? el('div', { class:'tiny muted' }, [subtitle]) : null,
+      progressBar(pct, title, tone)
     ]);
 
     const projectCard = (p) => {
@@ -6378,6 +7080,15 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
       const lastText = p.lastStep
         ? `${formatDateBR(p.lastStep.data)} - ${normalizeProjectStep(p.lastStep.etapa)}`
         : '-';
+      const wc = p.windowClassification || {};
+      const windowIndicatorBadges = [
+        wc.exceedsPlannedWindow ? el('span', {
+          class:'pill warn',
+          title:`Baseline: ${formatDateBR(wc.baselineStart)} até ${formatDateBR(wc.baselineEnd)}. Prazo atual: ${formatDateBR(wc.currentEnd)}.`
+        }, [`Prazo original excedido${wc.exceededDays ? `: +${wc.exceededDays} dia(s)` : ''}`]) : null,
+        wc.hasEarlyExecution ? el('span', { class:'pill info', title:'Há apontamentos antes da data de início planejada.' }, [`Execução antecipada: ${wc.earlyCount} apontamento(s) / ${fmtHours(wc.earlyHours)}h`]) : null,
+        wc.hasLateExecution ? el('span', { class:'pill bad', title:'Há apontamentos depois do prazo atual da demanda.' }, [`Execução fora do prazo: ${wc.lateCount} apontamento(s) / ${fmtHours(wc.lateHours)}h`]) : null,
+      ].filter(Boolean);
 
       return el('div', {
         style:'border:1px solid var(--border);border-radius:18px;padding:14px;background:#fff;box-shadow:0 10px 26px rgba(15,23,42,.06);display:flex;flex-direction:column;gap:12px;min-height:340px'
@@ -6385,7 +7096,9 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
         el('div', { class:'row', style:'justify-content:space-between;gap:10px;align-items:flex-start' }, [
           el('div', { style:'min-width:0' }, [
             el('div', { style:'font-weight:950;font-size:15px;line-height:1.25;word-break:break-word' }, [d.titulo || d.id || 'Demanda']),
-            el('div', { class:'tiny muted', style:'margin-top:4px' }, [`Janela: ${formatDateBR(d.data_inicio)} até ${formatDateBR(d.data_fim)}${p.remainingDays ? ' - ' + p.remainingDays : ''}`])
+            el('div', { class:'tiny muted', style:'margin-top:4px' }, [`Janela atual: ${formatDateBR(d.data_inicio)} até ${formatDateBR(d.data_fim)}${p.remainingDays ? ' - ' + p.remainingDays : ''}`]),
+            el('div', { class:'tiny muted', style:'margin-top:3px' }, [`Programado original: ${formatDateBR(wc.baselineStart)} até ${formatDateBR(wc.baselineEnd)}`]),
+            windowIndicatorBadges.length ? el('div', { class:'row', style:'gap:6px;flex-wrap:wrap;margin-top:6px' }, windowIndicatorBadges) : null
           ]),
           el('span', { class:`pill ${statusTone}`, title:p.health.hint, style:'white-space:nowrap' }, [p.health.label])
         ]),
@@ -6400,11 +7113,26 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
           miniMetric('Último apontamento', lastText, 'histórico operacional')
         ]),
 
-        el('div', { class:'grid', style:'gap:8px;margin-top:auto' }, [
-          el('div', { class:'row', style:'justify-content:space-between' }, [el('div', { class:'tiny muted' }, ['Avanço da janela']), el('div', { class:'tiny mono' }, [pctText(p.windowPct)])]),
-          progressBar(p.windowPct, 'Percentual da janela planejada já consumido'),
-          el('div', { class:'row', style:'justify-content:space-between' }, [el('div', { class:'tiny muted' }, ['Execução real apontada']), el('div', { class:'tiny mono' }, [pctText(m.progressPct)])]),
-          progressBar(m.progressPct, 'Percentual das horas planejadas já apontado como realizado')
+        el('div', { class:'grid', style:'gap:10px;margin-top:auto' }, [
+          progressRow(
+            'Avanço da janela original',
+            p.plannedWindowPct ?? p.windowPct,
+            `Original: ${formatDateBR(wc.baselineStart)} → ${formatDateBR(wc.baselineEnd)}. Ao fim original, permanece em 100%.`,
+            `Conta somente a janela original: ${formatDateBR(wc.baselineStart)} até ${formatDateBR(wc.baselineEnd)}.`
+          ),
+          wc.exceedsPlannedWindow ? progressRow(
+            'Janela reprogramada',
+            p.reprogrammedPct,
+            `Extensão: ${formatDateBR(wc.baselineEnd)} → ${formatDateBR(wc.currentEnd)} (${wc.exceededDays} dia(s)).`,
+            `Conta somente a extensão reprogramada: ${formatDateBR(wc.baselineEnd)} até ${formatDateBR(wc.currentEnd)}.`,
+            'reprogrammed'
+          ) : null,
+          progressRow(
+            'Execução real apontada',
+            m.progressPct,
+            `${hoursText(m.realHours)} realizadas de ${hoursText(m.plannedHours)} planejadas.`,
+            'Percentual das horas planejadas já apontado como realizado'
+          )
         ]),
 
         p.stepBadges.length
@@ -6462,7 +7190,7 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
           miniMetric('Projetos em atenção', String(totals.attention), 'atenção ou acima do planejado')
         ])
       ])),
-      card('Avaliação por Projeto ? Kanban', null, cards)
+      card('Avaliação por Projeto', null, cards)
     ]);
   };
 
@@ -6498,7 +7226,7 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
         const validation = validateResourcePayload({ nome, tipo:type.value, vigencia_inicio:vigIni.value, vigencia_fim:vigFim.value });
         if (validation) return toast(validation);
         const payload = {
-          id: generateId(),
+          id: generateId('resource'),
           nome,
           tipo: type.value,
           horas_dia: (type.value === 'Terceiro' ? HOURS_PER_DAY_THIRD : HOURS_PER_DAY),
@@ -6623,14 +7351,14 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
     })();
 
     const form = (() => {
-      const titulo = el('input', { placeholder:'Ex: PQ Sistema X', maxlength:String(INPUT_LIMITS.demandTitle) });
-      const predio = el('input', { placeholder:'Ex: Prédio A', maxlength:String(INPUT_LIMITS.building) });
-      const focal = el('input', { placeholder:'Ex: Fulano (Focal)', maxlength:String(INPUT_LIMITS.focal) });
+      const titulo = el('input', { placeholder:'Ex: PQ Sistema X', maxlength:String(INPUT_LIMITS.demandTitle), 'data-demand-create-field':'titulo' });
+      const predio = el('input', { placeholder:'Ex: Prédio A', maxlength:String(INPUT_LIMITS.building), 'data-demand-create-field':'predio' });
+      const focal = el('input', { placeholder:'Ex: Fulano (Focal)', maxlength:String(INPUT_LIMITS.focal), 'data-demand-create-field':'focal' });
 
       // Responsáveis: busca + chips (mais intuitivo que select multiple/Ctrl)
       const selectedRespIds = new Set();
       const respPctById = new Map();
-      const respSearch = el('input', { class:'multiSelectInput', placeholder:'Digite o nome do responsável...' });
+      const respSearch = el('input', { class:'multiSelectInput', placeholder:'Digite o nome do responsável...', 'data-demand-create-field':'responsavelBusca' });
       const respChips = el('div', { style:'display:contents' });
       const respMenu = el('div', { class:'multiSelectMenu' });
       const respBox = el('div', { class:'multiSelectBox' }, [respChips, respSearch]);
@@ -6638,6 +7366,7 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
         respBox,
         respMenu
       ]);
+      let persistDemandCreateDraft = () => {};
 
       const getRespName = (id) => (state.resources||[]).find(r => r.id === id)?.nome || id;
       const selectedResponsaveis = () => [...selectedRespIds].filter(Boolean);
@@ -6660,11 +7389,12 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
         renderRespOptions();
         restoreRespBoxScroll(keepScrollLeft, false);
         if (selectedRespIds.size === 0) { status.value = 'Mapeada'; syncMapeada(); }
+        persistDemandCreateDraft();
       };
 
       const respAllocList = el('div', { class:'respAllocList' });
-      const respAllocPick = el('select');
-      const respAllocPctEditor = el('input', { type:'number', min:'0', max:'100', step:'5' });
+      const respAllocPick = el('select', { 'data-demand-create-field':'percentualResponsavel' });
+      const respAllocPctEditor = el('input', { type:'number', min:'0', max:'100', step:'5', 'data-demand-create-field':'percentualValor' });
       const respAllocEditor = el('div', { class:'row', style:'gap:8px;align-items:end;margin-top:8px;display:none' }, [
         el('div', { class:'field', style:'min-width:220px;flex:1' }, [el('label', {}, ['Recurso para editar']), respAllocPick]),
         el('div', { class:'field compact' }, [el('label', {}, ['% diário']), respAllocPctEditor]),
@@ -6672,11 +7402,13 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
       respAllocPick.addEventListener('change', () => {
         const rid = String(respAllocPick.value || '');
         respAllocPctEditor.value = String(respPctById.get(rid) ?? 100);
+        respAllocPctEditor.setAttribute('data-demand-create-rid', rid);
       });
       respAllocPctEditor.addEventListener('input', () => {
         const rid = String(respAllocPick.value || '');
         if (!rid) return;
         respPctById.set(rid, Number(respAllocPctEditor.value || 0));
+        persistDemandCreateDraft();
       });
       const renderRespChips = () => {
         const keepScrollLeft = respBox ? respBox.scrollLeft : 0;
@@ -6691,6 +7423,7 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
           const current = ids.includes(respAllocPick.value) ? respAllocPick.value : ids[0];
           respAllocPick.value = current;
           respAllocPctEditor.value = String(respPctById.get(current) ?? 100);
+          respAllocPctEditor.setAttribute('data-demand-create-rid', current);
         }
         for (const rid of selectedRespIds) {
           const chip = el('span', { class:'multiSelectChip', 'data-rid': rid }, [
@@ -6708,8 +7441,8 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
             ev.stopPropagation();
           });
           respChips.appendChild(chip);
-          const pct = el('input', { type:'number', min:'0', max:'100', step:'5', value:String(respPctById.get(rid) ?? 100), disabled: ids.length >= 2 ? '' : null });
-          pct.addEventListener('input', () => { respPctById.set(rid, Number(pct.value || 0)); });
+          const pct = el('input', { type:'number', min:'0', max:'100', step:'5', value:String(respPctById.get(rid) ?? 100), disabled: ids.length >= 2 ? '' : null, 'data-demand-create-field':'percentualLinha', 'data-demand-create-rid': rid });
+          pct.addEventListener('input', () => { respPctById.set(rid, Number(pct.value || 0)); persistDemandCreateDraft(); });
           respAllocList.appendChild(el('div', { class:'respAllocRow' }, [
             el('div', { class:'respAllocName', title:getRespName(rid) }, [getRespName(rid)]),
             el('div', { class:'respAllocPct' }, [el('label', {}, ['% diário']), pct]),
@@ -6730,6 +7463,7 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
         renderRespOptions();
         openRespMenu();
         restoreRespBoxScroll(keepScrollLeft, wasAtEnd);
+        persistDemandCreateDraft();
       };
 
       const renderRespOptions = () => {
@@ -6775,21 +7509,21 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
       });
       document.addEventListener('mousedown', (ev) => { if (!responsavel.contains(ev.target)) closeRespMenu(); });
 
-      const ini = el('input', { type:'date', min:`${MIN_APP_YEAR}-01-01`, max:`${MAX_APP_YEAR}-12-31` });
-      const fim = el('input', { type:'date', min:`${MIN_APP_YEAR}-01-01`, max:`${MAX_APP_YEAR}-12-31` });
-      const prioridade = el('select', {}, [
+      const ini = el('input', { type:'date', min:`${MIN_APP_YEAR}-01-01`, max:`${MAX_APP_YEAR}-12-31`, 'data-demand-create-field':'dataInicio' });
+      const fim = el('input', { type:'date', min:`${MIN_APP_YEAR}-01-01`, max:`${MAX_APP_YEAR}-12-31`, 'data-demand-create-field':'dataFim' });
+      const prioridade = el('select', { 'data-demand-create-field':'prioridade' }, [
         el('option', { value:'Baixa' }, ['Baixa']),
         el('option', { value:'Média' }, ['Média']),
         el('option', { value:'Alta' }, ['Alta']),
         el('option', { value:'Crítica' }, ['Crítica']),
       ]);
-      const status = el('select', {}, [
+      const status = el('select', { 'data-demand-create-field':'status' }, [
         el('option', { value:'Em andamento' }, ['Em andamento']),
         el('option', { value:'Concluída' }, ['Concluída']),
         el('option', { value:'Mapeada' }, ['Mapeada (sem responsável)']),
         el('option', { value:'Congelada' }, ['Congelada']),
       ]);
-      const obs = el('textarea', { placeholder:'Observações...', maxlength:String(INPUT_LIMITS.demandNotes) });
+      const obs = el('textarea', { placeholder:'Observações...', maxlength:String(INPUT_LIMITS.demandNotes), 'data-demand-create-field':'observacoes' });
 
       const syncMapeada = () => {
         const st = normalizeStatus(status.value);
@@ -6808,13 +7542,55 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
         renderRespChips();
         renderRespOptions();
       };
-      status.addEventListener('change', syncMapeada);
+      persistDemandCreateDraft = () => saveDemandCreateDraft({
+        titulo: titulo.value,
+        predio: predio.value,
+        focal: focal.value,
+        data_inicio: ini.value,
+        data_fim: fim.value,
+        prioridade: prioridade.value,
+        status: normalizeStatus(status.value),
+        observacoes: obs.value,
+        responsavelIds: selectedResponsaveis(),
+        respPctById: Object.fromEntries([...respPctById].map(([rid, pct]) => [rid, Number(pct || 0)])),
+      });
+
+      const restoreDemandCreateDraft = (draft) => {
+        const d = normalizeDemandCreateDraft(draft);
+        if (!hasMeaningfulDemandCreateDraft(d)) return false;
+        titulo.value = d.titulo || '';
+        predio.value = d.predio || '';
+        focal.value = d.focal || '';
+        ini.value = d.data_inicio || '';
+        fim.value = d.data_fim || '';
+        prioridade.value = ['Baixa','Média','Alta','Crítica'].includes(d.prioridade) ? d.prioridade : 'Média';
+        status.value = d.status || (d.responsavelIds.length ? 'Em andamento' : 'Mapeada');
+        obs.value = d.observacoes || '';
+        selectedRespIds.clear();
+        respPctById.clear();
+        for (const rid of d.responsavelIds) {
+          selectedRespIds.add(rid);
+          respPctById.set(rid, Number(d.respPctById?.[rid] ?? 100));
+        }
+        if (selectedRespIds.size && normalizeStatus(status.value) === 'Mapeada') status.value = 'Em andamento';
+        syncMapeada();
+        return true;
+      };
+
+      const draftRestored = restoreDemandCreateDraft(loadDemandCreateDraft());
+      status.addEventListener('change', () => { syncMapeada(); persistDemandCreateDraft(); });
+      [titulo, predio, focal, ini, fim, prioridade, obs].forEach(field => {
+        field.addEventListener('input', persistDemandCreateDraft);
+        field.addEventListener('change', persistDemandCreateDraft);
+      });
       // default
-      status.value = 'Mapeada';
-      syncMapeada();
+      if (!draftRestored) {
+        status.value = 'Mapeada';
+        syncMapeada();
+      }
 
       // Prefill vindo de atalhos (ex.: abrir dia na matriz de janelas e clicar em "Cadastrar demanda")
-      if (uiFilters.prefillDemand) {
+      if (uiFilters.prefillDemand && !draftRestored) {
         const p = uiFilters.prefillDemand;
         if (p.data_inicio) ini.value = p.data_inicio;
         if (p.data_fim) fim.value = p.data_fim;
@@ -6825,6 +7601,9 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
           status.value = 'Mapeada';
         }
         syncMapeada();
+        persistDemandCreateDraft();
+        uiFilters.prefillDemand = null;
+      } else if (uiFilters.prefillDemand) {
         uiFilters.prefillDemand = null;
       }
 
@@ -6869,6 +7648,8 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
           focal: focalVal,
           data_inicio: iniVal,
           data_fim: fimVal,
+          baseline_inicio: iniVal,
+          baseline_fim: fimVal,
           percentual_diario: Number(allocations[0]?.percentual_diario || 0),
           observacoes: obsVal,
           prioridade: prioridade.value,
@@ -6877,9 +7658,14 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
           allocations,
           responsavel_id: allocations[0]?.resourceId || '',
         };
-        dispatch('ADD_DEMAND', { ...basePayload, id: generateId() });
+        const newDemand = { ...basePayload, id: generateId() };
+        dispatch('ADD_DEMAND', newDemand);
+        const added = (state.demands || []).some(d => String(d.id) === String(newDemand.id));
+        if (!added) return;
+        clearDemandCreateDraft();
         titulo.value=''; predio.value=''; selectedRespIds.clear(); respPctById.clear(); respSearch.value=''; focal.value=''; ini.value=''; fim.value=''; obs.value=''; prioridade.value='Média'; status.value='Mapeada';
         syncMapeada();
+        render();
         toast('Demanda adicionada.');
       };
 
@@ -7114,15 +7900,18 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
         const endDate = isoToLocalMidnight(end);
         if (!startDate || !endDate) return toast('Informe datas válidas para o bloqueio.');
 
-        let count = 0;
-        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-          dispatch('ADD_BLOCKING', { id: generateId('block'), recurso_id: res.value, data: formatDate(d), tipo: tipo.value });
-          count += 1;
-        }
+        dispatch('ADD_BLOCKING', {
+          id: generateId('block'),
+          recurso_id: res.value,
+          data: start,
+          data_inicio: start,
+          data_fim: end,
+          tipo: tipo.value,
+        });
         uiPagination.blockingsPage = 1;
         dateStart.value='';
         dateEnd.value='';
-        toast(count > 1 ? `${count} bloqueios adicionados.` : 'Bloqueio adicionado.');
+        toast(start === end ? 'Bloqueio adicionado.' : 'Bloqueio adicionado em uma linha para o período selecionado.');
       };
       const addHoliday = () => {
         if (!hDate.value) return toast('Selecione a data do feriado.');
@@ -7158,12 +7947,12 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
       // Paginação: 10 itens por página (Bloqueios e Feriados)
 
       // ---- Bloqueios
-      const blockingsAll = (state.blockings||[]).slice().sort((a,b) => {
-        const da = a.data || '';
-        const db = b.data || '';
+      const blockingsAll = buildBlockingDisplayRows(state.blockings||[]).sort((a,b) => {
+        const da = a.start || '';
+        const db = b.start || '';
         if (da !== db) return da.localeCompare(db);
-        const ra = (resMap[a.recurso_id]?.nome || '');
-        const rb = (resMap[b.recurso_id]?.nome || '');
+        const ra = (resMap[a.resourceId]?.nome || '');
+        const rb = (resMap[b.resourceId]?.nome || '');
         if (ra !== rb) return ra.localeCompare(rb);
         return String(a.id||'').localeCompare(String(b.id||''));
       });
@@ -7185,14 +7974,14 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
       const btb = el('tbody');
       for (const b of blockings) {
         const tr = el('tr');
-        tr.appendChild(el('td', {}, [resMap[b.recurso_id]?.nome || '-']));
-        tr.appendChild(el('td', { class:'mono tiny' }, [formatDateBR(b.data)]));
-        tr.appendChild(el('td', {}, [b.tipo]));
+        tr.appendChild(el('td', {}, [resMap[b.resourceId]?.nome || '-']));
+        tr.appendChild(el('td', { class:'mono tiny' }, [blockingDateLabel(b)]));
+        tr.appendChild(el('td', {}, [b.tipo || '-']));
         tr.appendChild(el('td', {}, [
           el('div', { class:'actionBtns' }, [
             iconButton('Excluir', '🗑', 'danger', () => {
-              dispatch('DELETE_BLOCKING', b.id);
-              toast('Bloqueio removido.');
+              for (const id of (b.ids || [b.id]).filter(Boolean)) dispatch('DELETE_BLOCKING', id);
+              toast((b.ids || []).length > 1 ? 'Bloqueios do período removidos.' : 'Bloqueio removido.');
             })
           ])
         ]));
@@ -8365,7 +9154,7 @@ Dias 0h: ${m.daysZero} - Dias excedidos: ${m.daysOver}`;
         return wrap;
       })();
 
-      return card('Hora Extra (HE) ? fins de semana', null, el('div', { class:'grid' }, [note, toolbar, list]));
+      return card('Hora Extra (HE)', null, el('div', { class:'grid' }, [note, toolbar, list]));
     })();
 
 return el('div', { class:'grid' }, [
@@ -9025,21 +9814,6 @@ return el('div', { class:'grid' }, [
       toast('Modelo de BD exportado.');
     };
 
-    const copyDbPath = async () => {
-      if (!dbPathValue) {
-        toast('Nenhum caminho salvo.');
-        return;
-      }
-      try {
-        await navigator.clipboard.writeText(dbPathValue);
-        toast('Caminho copiado.');
-      } catch {
-        const copied = fallbackCopyText(dbPathValue);
-        toast(copied ? 'Caminho copiado.' : 'Não foi possível copiar o caminho.');
-      }
-    };
-
-    const dbPathInput = el('input', { type:'text', value: dbPathValue, placeholder:'\\servidor\pasta\arquivo.json' });
 
     const dbStatusPill = (() => {
       let label = 'Nenhum BD vinculado';
@@ -9071,71 +9845,61 @@ return el('div', { class:'grid' }, [
       ]),
       card('Banco JSON direto (avançado)', null, el('div', { class:'grid' }, [
         dbMeta,
-        el('div', { class:'row' }, [
-          el('div', { class:'field' }, [
-            el('label', {}, ['Banco JSON oficial']),
+        el('div', { class:'tiny muted' }, [
+          'Fluxo esperado: selecione o JSON oficial pelo botão. Por segurança do navegador, o app não tenta abrir file:// automaticamente. Ao carregar o BD, feriados já cadastrados são preservados/mesclados e não somem.'
+        ]),
+        el('details', { class:'hint tiny' }, [
+          el('summary', { style:'cursor:pointer;font-weight:950' }, ['Avançado / manutenção do BD']),
+          el('div', { class:'grid', style:'margin-top:10px' }, [
+            el('div', { class:'field', style:'max-width:260px' }, [
+              el('label', {}, ['Senha de manutenção']),
+              el('input', {
+                type:'password',
+                placeholder:'Digite a senha',
+                autocomplete:'off',
+                oninput:(ev) => {
+                  const unlocked = String(ev.target.value || '') === 'manutencao';
+                  const details = ev.target.closest('details');
+                  if (!details) return;
+                  details.querySelectorAll('[data-maintenance-action="1"]').forEach(btn => { btn.disabled = unlocked ? null : true; });
+                  const status = details.querySelector('[data-maintenance-status="1"]');
+                  if (status) status.textContent = unlocked ? 'Acesso liberado.' : 'Digite a senha para liberar as ações.';
+                }
+              })
+            ]),
             el('div', { class:'row' }, [
-              button(dbBinding.mode === 'rw' ? 'Trocar arquivo JSON' : 'Selecionar arquivo JSON', 'primary', selectDbReadWrite),
-              dbAutoSyncPauseReason ? button('Religar autosync', 'primary', () => {
+              button('Salvar agora no BD', '', saveToSelectedDb, { disabled:true, 'data-maintenance-action':'1' }),
+              button('Recarregar do BD', '', reloadSelectedDb, { disabled:true, 'data-maintenance-action':'1' }),
+              button('Ligar autosync', '', () => {
                 if (capviewEventMode.enabled) {
                   disableDbAutoSyncForEventMode();
-                  toast('Modo Eventos ativo: autosync do BD permanece desligado.');
+                  toast('Modo Eventos ativo: desligue o modo Eventos antes de ligar autosync do BD.');
                   render();
                   return;
                 }
+                const wasPaused = !!dbAutoSyncPauseReason;
+                const wasEnabled = !!dbAutoSyncEnabled;
                 dbAutoSyncEnabled = true;
                 localStorage.setItem('capview_db_autosync_enabled', '1');
                 clearDbAutoSyncPause();
                 startDbWatcher();
-                scheduleDbAutoSave('resume-merge');
-                toast('Autosync religado: mesclando com o BD mais atual.');
-                render();
-              }) : null,
-            ].filter(Boolean))
-          ])
-        ]),
-        el('div', { class:'row' }, [
-          el('div', { class:'field', style:'flex:1;min-width:320px' }, [el('label', {}, ['Caminho do BD de Rede']), dbPathInput]),
-          el('div', { class:'field' }, [el('label', {}, ['Ações']), el('div', { class:'row' }, [
-            button('Salvar caminho', '', () => { setDbPathValue(dbPathInput.value); toast('Caminho salvo localmente.'); }),
-            button('Copiar', '', copyDbPath),
-          ])])
-        ]),
-        el('div', { class:'tiny muted' }, [
-          'Fluxo esperado: selecione o JSON oficial pelo botão. O caminho salvo é apenas referência visual/cópia; por segurança do navegador, o app não tenta abrir file:// automaticamente. Ao carregar o BD, feriados já cadastrados são preservados/mesclados e não somem.'
-        ]),
-        el('details', { class:'hint tiny' }, [
-          el('summary', { style:'cursor:pointer;font-weight:950' }, ['Avançado / manutenão do BD']),
-          el('div', { class:'row', style:'margin-top:10px' }, [
-            button('Salvar agora no BD', '', saveToSelectedDb),
-            button('Recarregar do BD', '', reloadSelectedDb),
-            button(dbAutoSyncEnabled ? 'Desligar autosync' : 'Ligar autosync', '', () => {
-              if (!dbAutoSyncEnabled && capviewEventMode.enabled) {
-                disableDbAutoSyncForEventMode();
-                toast('Modo Eventos ativo: desligue o modo Eventos antes de ligar autosync do BD.');
-                render();
-                return;
-              }
-              dbAutoSyncEnabled = !dbAutoSyncEnabled;
-              localStorage.setItem('capview_db_autosync_enabled', dbAutoSyncEnabled ? '1' : '0');
-              if (dbAutoSyncEnabled) {
-                const wasPaused = !!dbAutoSyncPauseReason;
-                clearDbAutoSyncPause();
-                startDbWatcher();
                 scheduleDbAutoSave(wasPaused ? 'resume-merge' : 'toggle-on');
-                toast(wasPaused ? 'Autosync religado: mesclando com o BD mais atual.' : 'Autosync ligado.');
-              }
-              else { stopDbWatcher(); clearDbAutoSyncPause(); toast('Autosync desligado.'); }
-              render();
-            }),
-            button('Limpar dados do sistema', 'danger', confirmClearAllData),
-          ]),
-          el('div', { class:'tiny muted', style:'margin-top:8px' }, [
-            'Use estes controles só para recuperação, teste ou manutenão. No uso normal, o autosync salva e recarrega automaticamente.'
+                toast(wasPaused ? 'Autosync religado: mesclando com o BD mais atual.' : (wasEnabled ? 'Autosync já está ligado.' : 'Autosync ligado.'));
+                render();
+              }, { disabled:true, 'data-maintenance-action':'1' }),
+              button('Limpar dados do sistema', 'danger', confirmClearAllData, { disabled:true, 'data-maintenance-action':'1' }),
+              button(dbBinding.mode === 'rw' ? 'Trocar arquivo JSON' : 'Selecionar arquivo JSON', 'primary', selectDbReadWrite, { disabled:true, 'data-maintenance-action':'1' }),
+            ]),
+            el('div', { class:'tiny muted', 'data-maintenance-status':'1' }, [
+              'Digite a senha para liberar as ações.'
+            ]),
+            el('div', { class:'tiny muted' }, [
+              'Use estes controles só para recuperação, teste ou manutenção. No uso normal, o autosync salva e recarrega automaticamente.'
+            ])
           ])
         ])
       ])),
-      card('Eventos por usuário ? anti-sobrescrita', null, el('div', { class:'grid' }, [
+      card('Eventos por usuário', null, el('div', { class:'grid' }, [
         el('div', { class:'hint tiny' }, [
           el('b', {}, ['Como funciona: ']),
           'selecione uma pasta ', el('span', { class:'mono' }, ['ORIZONData']), '. O app cria/usa ', el('span', { class:'mono' }, ['snapshot.json']), ' e ', el('span', { class:'mono' }, ['events/usuario.json']), '. Cada usuário grava no próprio arquivo de eventos; depois o app lê todos e aplica em ordem.'
@@ -9668,12 +10432,12 @@ return el('div', { class:'grid' }, [
     const resMap = resourceById();
     return {
       headers: ['id','recurso','data','tipo','observacao'],
-      rows: (state.blockings||[]).map(b => ({
-        id: b.id || '',
-        recurso: resMap[b.recurso_id]?.nome || b.resourceId || b.recurso_id || '',
-        data: b.data || b.date || '',
+      rows: buildBlockingDisplayRows(state.blockings||[]).map(b => ({
+        id: (b.ids || [b.id]).filter(Boolean).join('|'),
+        recurso: resMap[b.resourceId]?.nome || b.resourceId || '',
+        data: blockingDateLabel(b),
         tipo: b.tipo || '',
-        observacao: b.obs || b.observacao || ''
+        observacao: b.observacao || ''
       }))
     };
   };
@@ -9746,12 +10510,13 @@ return el('div', { class:'grid' }, [
 
   const exportBloqueiosCSV = () => {
     const headers = ['id','recurso','data','tipo','observacao'];
-    const rows = (state.blockings||[]).map(b => ({
-      id: b.id || '',
-      recurso: b.resourceId || '',
-      data: b.date || '',
+    const resMap = resourceById();
+    const rows = buildBlockingDisplayRows(state.blockings||[]).map(b => ({
+      id: (b.ids || [b.id]).filter(Boolean).join('|'),
+      recurso: resMap[b.resourceId]?.nome || b.resourceId || '',
+      data: blockingDateLabel(b),
       tipo: b.tipo || '',
-      observacao: b.obs || b.observacao || ''
+      observacao: b.observacao || ''
     }));
     downloadText('bloqueios.csv', toCSV(rows, headers), 'application/vnd.ms-excel;charset=utf-8');
     toast('CSV de Bloqueios exportado.');
@@ -10113,55 +10878,166 @@ return el('div', { class:'grid' }, [
     const saveBtn = qs('#userModalSave');
     const nameInput = qs('#userModalName');
     const idInput = qs('#userModalId');
+    const btnCopy = qs('#btnCopyUserId');
+    const btnFolder = qs('#btnUserSelectEventFolder');
+    const folderStatus = qs('#userFolderStatus');
+    const existingSelect = qs('#userExistingSelect');
+    const existingHint = qs('#userExistingHint');
+    const createMode = qs('#userCreateMode');
+    const localWarning = qs('#userLocalWarning');
 
-        const btnCopy = qs('#btnCopyUserId');
-const syncPreview = () => {
-      const nm = String(nameInput?.value||'').trim();
-      if (!nm) { if (idInput) idInput.value = ''; return; }
-      const u = previewUserIdentity(nm);
-      if (idInput) idInput.value = u.userId;
+    const selectedExistingUser = () => {
+      const id = String(existingSelect?.value || '').trim();
+      return (scannedEventUsers || []).find(u => String(u.userId) === id) || null;
+    };
+    let pendingNewUserIdentity = null;
+
+    const refreshSaveState = () => {
+      const folderReady = sharedFolderReady();
+      const selected = selectedExistingUser();
+      if (selected && createMode?.checked) createMode.checked = false;
+      const creating = !!createMode?.checked;
+      const nm = String(nameInput?.value || '').trim();
+      if (createMode) createMode.disabled = !folderReady || !!selected;
+      if (nameInput) nameInput.disabled = !folderReady || !creating;
+      if (existingSelect) existingSelect.disabled = !folderReady || creating || !(scannedEventUsers || []).length;
+      const existingLoginReady = !!(selected && !creating);
+      const newUserReady = !!(!selected && creating && nm);
+      if (saveBtn) saveBtn.disabled = !(folderReady && (existingLoginReady || newUserReady));
+      if (idInput) {
+        if (existingLoginReady) idInput.value = selected.userId;
+        else if (newUserReady) {
+          if (!pendingNewUserIdentity || pendingNewUserIdentity.displayName !== nm) pendingNewUserIdentity = previewUserIdentity(nm);
+          idInput.value = pendingNewUserIdentity.userId;
+        }
+        else idInput.value = '';
+      }
     };
 
-    if (nameInput) nameInput.addEventListener('input', syncPreview);
+    const populateUsers = (users=[]) => {
+      if (!existingSelect) return;
+      existingSelect.innerHTML = '';
+      existingSelect.appendChild(el('option', { value:'' }, [users.length ? 'Selecione um usuário existente' : 'Nenhum usuário encontrado']));
+      for (const u of users) {
+        const label = `${u.displayName} — ${u.userId}`;
+        existingSelect.appendChild(el('option', { value:u.userId }, [label]));
+      }
+      existingSelect.disabled = !sharedFolderReady() || !users.length;
+      if (existingHint) existingHint.textContent = users.length
+        ? `${users.length} usuário(s) com arquivo em events encontrado(s). ${scannedEventDiagnostics.length ? 'Atenção: há nomes iguais com IDs diferentes no diagnóstico.' : ''}`
+        : 'Nenhum usuário encontrado na pasta events; habilite Criar novo usuário.';
+    };
 
-    
+    const refreshFolderUsers = async () => {
+      if (folderStatus) folderStatus.textContent = sharedFolderReady() ? `Pasta conectada: ${capviewEventMode.folderName || 'ORIZONData'}` : 'Nenhuma pasta selecionada.';
+      if (createMode) createMode.disabled = !sharedFolderReady();
+      if (!sharedFolderReady()) {
+        populateUsers([]);
+        if (nameInput) nameInput.disabled = true;
+        refreshSaveState();
+        return;
+      }
+      try {
+        const result = await scanEventFolderUsers();
+        populateUsers(result.users);
+        const localKnown = !hasUser() || result.users.some(u => String(u.userId) === String(userId));
+        if (localWarning) localWarning.style.display = localKnown ? 'none' : '';
+        if (hasUser()) {
+          const match = result.users.find(u => String(u.userId) === String(userId));
+          if (match && existingSelect) {
+            existingSelect.value = match.userId;
+            if (nameInput) nameInput.value = match.displayName;
+            if (idInput) idInput.value = match.userId;
+          }
+        }
+      } catch (e) {
+        console.warn('[ORIZON Usuários] Falha ao carregar usuários da pasta:', e);
+        if (existingHint) existingHint.textContent = 'Não foi possível carregar usuários da pasta selecionada.';
+      }
+      refreshSaveState();
+    };
+
+    const setCreateMode = (enabled) => {
+      const turnOnCreate = !!enabled;
+      if (turnOnCreate && existingSelect) existingSelect.value = '';
+      if (createMode) createMode.checked = turnOnCreate;
+      if (nameInput) {
+        nameInput.disabled = !sharedFolderReady() || !turnOnCreate;
+        nameInput.readOnly = false;
+        nameInput.classList.remove('locked');
+        if (turnOnCreate) {
+          nameInput.value = '';
+          pendingNewUserIdentity = null;
+        }
+      }
+      if (existingSelect) existingSelect.disabled = !sharedFolderReady() || turnOnCreate || !(scannedEventUsers || []).length;
+      refreshSaveState();
+    };
+
+    if (btnFolder) btnFolder.addEventListener('click', async () => {
+      const ok = await selectORIZONDataFolder({ requireUser:false });
+      if (ok) await refreshFolderUsers();
+    });
+
+    if (existingSelect) existingSelect.addEventListener('change', () => {
+      const u = selectedExistingUser();
+      if (u) {
+        setCreateMode(false);
+        if (nameInput) nameInput.value = u.displayName;
+        if (idInput) idInput.value = u.userId;
+      } else {
+        if (nameInput && !createMode?.checked) nameInput.value = '';
+        if (idInput) idInput.value = '';
+      }
+      refreshSaveState();
+    });
+
+    if (createMode) createMode.addEventListener('change', () => setCreateMode(createMode.checked));
+    if (nameInput) nameInput.addEventListener('input', refreshSaveState);
+
     if (btnCopy) btnCopy.addEventListener('click', async () => {
       const val = String(idInput?.value||'').trim();
-      if (!val) { toast('Gere o ID digitando seu nome.'); return; }
+      if (!val) { toast('Gere ou selecione um ID primeiro.'); return; }
       try {
         await navigator.clipboard.writeText(val);
         toast('ID copiado.');
       } catch {
-        // fallback
         const copied = fallbackCopyText(val);
         toast(copied ? 'ID copiado.' : 'Não foi possível copiar o ID.');
       }
     });
-const tryClose = () => {
+
+    const tryClose = () => {
       if (dlg?.dataset.force === '1' && !hasUser()) {
         toast('Você precisa definir o usuário para continuar.');
         return;
       }
       closeDialog(dlg);
       document.body.classList.remove('user-modal-open');
-      };
+    };
 
     if (btnOpen) btnOpen.addEventListener('click', () => openUserModal(true));
     if (closeBtn) closeBtn.addEventListener('click', tryClose);
     if (cancelBtn) cancelBtn.addEventListener('click', tryClose);
-    if (saveBtn) saveBtn.addEventListener('click', () => {
-      if (isUserIdentityLocked()) {
-        toast('Usuário já definido e bloqueado.');
+    if (saveBtn) saveBtn.addEventListener('click', async () => {
+      const creating = !!createMode?.checked;
+      const existing = selectedExistingUser();
+      if (creating && existing) {
+        toast('Escolha apenas uma opção: usuário existente ou criar novo usuário.');
+        refreshSaveState();
         return;
       }
-      const nm = String(nameInput?.value||'').trim();
-      const validation = validateTextLimit(nm, 'Nome do usuário', INPUT_LIMITS.userName, { required:true });
-      if (validation) { toast(validation); return; }
-      setUser(nm);
+      const ok = await resolveActiveUser({
+        displayName: creating ? String(nameInput?.value || '').trim() : (existing?.displayName || ''),
+        userId: creating ? String(idInput?.value || '') : (existing?.userId || ''),
+        createNew: creating
+      });
+      if (!ok) { refreshSaveState(); return; }
       const hdr = qs('#userName'); if (hdr) hdr.value = userName;
       closeDialog(dlg);
       document.body.classList.remove('user-modal-open');
-      toast('Usuário definido com sucesso.');
+      toast(creating ? 'Novo usuário criado com sucesso.' : 'Usuário existente selecionado com sucesso.');
+      render();
     });
 
     if (dlg) dlg.addEventListener('cancel', (e) => {
@@ -10169,6 +11045,9 @@ const tryClose = () => {
     });
 
     if (dlg) dlg.addEventListener('close', () => document.body.classList.remove('user-modal-open'));
+
+    wireUserModal.refreshFolderUsers = refreshFolderUsers;
+    wireUserModal.setCreateMode = setCreateMode;
   };
   wireUserModal();
 
