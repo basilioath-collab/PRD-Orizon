@@ -98,6 +98,26 @@
     .avatar.warn{background:var(--red);cursor:pointer;position:relative}
     .avatar.warn::after{content:'Defina o usuário';position:absolute;white-space:nowrap;opacity:0;pointer-events:none;transform:translateY(6px);transition:.15s;left:50%;top:100%;padding:6px 8px;border-radius:10px;background:rgba(0,0,0,.75);color:#fff;font-size:12px;font-weight:700;translate:-50% 0}
     .avatar.warn:hover::after{opacity:1;transform:translateY(0)}
+    .notifyWrap{position:relative;display:flex;align-items:center}
+    .notifyBell{position:relative;height:42px;width:42px;border-radius:999px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;transition:background-color .16s ease,border-color .16s ease,color .16s ease,transform .12s ease}
+    .notifyBell:hover,.notifyBell.open{background:var(--success);border-color:var(--success);color:var(--header);transform:translateY(-1px)}
+    .notifyBell.active{border-color:var(--success);box-shadow:0 0 0 3px rgba(138,212,32,.18)}
+    .notifyBadge{position:absolute;right:-3px;top:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--danger);color:#fff;border:2px solid var(--header);display:none;align-items:center;justify-content:center;font-size:10px;font-weight:950;line-height:1}
+    .notifyBell.active .notifyBadge{display:flex}
+    .notifyPanel{position:absolute;right:0;top:calc(100% + 10px);width:min(360px,calc(100vw - 24px));max-height:420px;overflow:auto;background:#fff;color:var(--text);border:1px solid var(--border);border-radius:16px;box-shadow:0 20px 48px rgba(5,5,5,.24);padding:10px;z-index:80;display:none}
+    .notifyWrap.open .notifyPanel{display:block}
+    .notifyPanel::before{content:'';position:absolute;right:14px;top:-7px;width:12px;height:12px;background:#fff;border-left:1px solid var(--border);border-top:1px solid var(--border);transform:rotate(45deg)}
+    .notifyHead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:4px 4px 8px;border-bottom:1px solid var(--border);margin-bottom:8px}
+    .notifyHead strong{font-size:13px;font-weight:950}
+    .notifyHead span{display:block;margin-top:2px;font-size:11px;color:var(--muted);font-weight:800}
+    .notifyClear{border:0;background:transparent;color:var(--primary);font-size:11px;font-weight:950;cursor:pointer;padding:4px 2px}
+    .notifyClear:hover{color:var(--success)}
+    .notifyItem{width:100%;border:1px solid var(--border);background:var(--surface);border-radius:14px;padding:10px;text-align:left;cursor:pointer;display:grid;gap:4px;margin-top:8px;color:var(--text)}
+    .notifyItem:hover{border-color:var(--success);background:var(--success-wash)}
+    .notifyItem .top{display:flex;align-items:center;gap:8px;font-weight:950;font-size:12px}
+    .notifyItem .dot{height:9px;width:9px;border-radius:999px;background:var(--success);flex:0 0 auto}
+    .notifyItem .sub{font-size:11px;color:var(--muted);font-weight:750;line-height:1.35}
+    .notifyEmpty{padding:14px 10px;color:var(--muted);font-size:12px;font-weight:800;text-align:center}
 
 
     nav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;gap:4px;overflow:auto;padding:8px 14px}
@@ -516,17 +536,51 @@ main{padding:14px;overflow-x:hidden}
 #demandsFormCard .field{
   flex:1 1 190px;
 }
+#demandsFormCard .demandAllocationRow{
+  display:grid;
+  grid-template-columns:minmax(280px,1.35fr) minmax(260px,1fr) minmax(150px,.55fr);
+  gap:10px;
+  align-items:start;
+}
+#demandsFormCard .demandRespField,
+#demandsFormCard .demandPercField,
+#demandsFormCard .demandStatusField{
+  min-width:0 !important;
+}
 #demandsFormCard .demandRespField{
   flex:2 1 360px !important;
-  min-width:280px !important;
 }
 #demandsFormCard .demandPercField{
-  flex:0 0 120px !important;
-  min-width:120px !important;
+  flex:0 1 260px !important;
 }
 #demandsFormCard .demandPercField input{
   min-width:0 !important;
+}
+#demandsFormCard .demandPercField .respAllocList{
+  margin-top:0;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+}
+#demandsFormCard .demandPercField .respAllocEditor{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 88px;
+  gap:8px;
+  align-items:center;
+  margin-top:0;
+}
+#demandsFormCard .demandPercField .respAllocEditor select,
+#demandsFormCard .demandPercField .respAllocEditor input{
   width:100%;
+  min-width:0;
+}
+#demandsFormCard .demandPercField .respAllocEditor input{
+  text-align:right;
+}
+#demandsFormCard .demandPercField .respAllocEditor.is-empty{
+  display:none;
+}
+#demandsFormCard .demandPercField .respAllocRow{
+  padding:8px;
+  grid-template-columns:minmax(0,1fr) auto;
 }
 #demandsFormCard .demandRespField .multiSelect{
   min-width:0 !important;
@@ -541,13 +595,30 @@ main{padding:14px;overflow-x:hidden}
   gap:8px;
   margin-top:8px;
 }
+.respAllocHint{
+  font-size:11px;
+  color:var(--muted);
+  font-weight:800;
+  line-height:1.35;
+}
+.respAllocEmpty{
+  border:1px dashed var(--border);
+  border-radius:12px;
+  padding:10px;
+  color:var(--muted);
+  background:var(--surface);
+  font-size:12px;
+  font-weight:800;
+}
 .respAllocRow{
   display:grid;
   grid-template-columns:minmax(0,1fr) auto;
-  gap:10px;
+  gap:12px;
   align-items:end;
-  padding:8px 0;
-  border-bottom:1px solid rgba(148,163,184,.2);
+  padding:10px;
+  border:1px solid rgba(148,163,184,.28);
+  border-radius:12px;
+  background:#fff;
 }
 .respAllocName{
   font-size:12px;
@@ -563,18 +634,89 @@ main{padding:14px;overflow-x:hidden}
   gap:4px;
 }
 .respAllocPct input{
-  width:88px;
-  min-width:88px;
+  width:88px !important;
+  min-width:88px !important;
   text-align:right;
 }
 @media (max-width:700px){
   .respAllocRow{grid-template-columns:1fr}
-  .respAllocPct input{width:100%;min-width:0}
+  .respAllocPct input{width:100% !important;min-width:0 !important}
+}
+@media (max-width: 900px){
+  #demandsFormCard .demandAllocationRow{
+    grid-template-columns:1fr;
+  }
 }
 @media (max-width: 700px){
   #demandsFormCard .field,
   #demandsFormCard .demandRespField,
-  #demandsFormCard .demandPercField{
+  #demandsFormCard .demandPercField,
+  #demandsFormCard .demandStatusField{
+    flex:1 1 100% !important;
+    min-width:0 !important;
+  }
+}
+
+/* --- Modal Editar Demanda: corrige largura e empilhamento dos campos de alocação --- */
+#demandEditModalBody .demandEditAllocRow{
+  align-items:flex-start;
+}
+#demandEditModalBody .demandRespField{
+  flex:2 1 360px !important;
+  min-width:280px !important;
+}
+#demandEditModalBody .demandStatusField{
+  flex:1 1 170px !important;
+  min-width:150px !important;
+}
+#demandEditModalBody .demandPercField{
+  flex:1 1 280px !important;
+  min-width:240px !important;
+}
+#demandEditModalBody .demandAllocSummaryField{
+  flex:1 1 100% !important;
+  min-width:0 !important;
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:12px;
+  background:var(--surface);
+}
+#demandEditModalBody .demandAllocSummaryField .respAllocList{
+  grid-template-columns:repeat(auto-fill,minmax(220px,280px));
+  align-items:stretch;
+}
+#demandEditModalBody .demandAllocSummaryField .respAllocRow{
+  min-width:0;
+}
+@media (max-width:700px){
+  #demandEditModalBody .demandAllocSummaryField .respAllocList{
+    grid-template-columns:1fr;
+  }
+}
+#demandEditModalBody .demandRespField .multiSelect{
+  min-width:0 !important;
+  width:100%;
+}
+#demandEditModalBody .demandRespField .multiSelectBox{
+  height:auto;
+  min-height:42px;
+  flex-wrap:wrap;
+  overflow:visible;
+}
+#demandEditModalBody .demandRespField .multiSelectInput{
+  min-width:140px !important;
+  flex:1 1 140px;
+}
+#demandEditModalBody .multiSelect.open{
+  z-index:500;
+}
+#demandEditModalBody .multiSelect.open .multiSelectMenu{
+  z-index:501;
+}
+@media (max-width:700px){
+  #demandEditModalBody .demandRespField,
+  #demandEditModalBody .demandStatusField,
+  #demandEditModalBody .demandPercField{
     flex:1 1 100% !important;
     min-width:0 !important;
   }
@@ -611,6 +753,15 @@ main{padding:14px;overflow-x:hidden}
     text-transform:uppercase;
 }
 
+.appFooter{
+    padding:18px 22px 26px;
+    text-align:center;
+    color:var(--muted);
+    font-size:11px;
+    font-weight:800;
+    line-height:1.5;
+}
+
 </style>
 </head>
 <body>
@@ -632,6 +783,14 @@ main{padding:14px;overflow-x:hidden}
     <span class="eventFolderText">Conectar pasta de eventos</span>
   </button>
 
+  <div class="notifyWrap" id="notifyWrap">
+    <button class="notifyBell" id="notifyBell" type="button" aria-label="Notificações de atividades atribuídas" aria-expanded="false" title="Notificações">
+      🔔
+      <span class="notifyBadge" id="notifyBadge">0</span>
+    </button>
+    <div class="notifyPanel" id="notifyPanel" role="menu" aria-label="Atividades atribuídas"></div>
+  </div>
+
   <div class="userBox">
     <div class="meta">
       <label>Usuário Ativo</label>
@@ -651,6 +810,8 @@ main{padding:14px;overflow-x:hidden}
   </div>
 
   <main id="app"><div class="globalDbWarn" style="margin-bottom:14px">Nenhum BD Vinculado<span class="tiny" style="display:block;margin-top:4px">Vá em <b>Sincronização de BD</b> &gt; <b>Banco de Dados</b> e selecione o arquivo da pasta de rede.</span></div><div class="grid"><div class="kpi"><div class="k"><div class="lbl">Recursos (total)</div><div class="val">0</div></div><div class="k"><div class="lbl">Recursos (ativos)</div><div class="val">0</div></div><div class="k"><div class="lbl">Demandas (total)</div><div class="val">0</div></div><div class="k"><div class="lbl">Demandas (abertas)</div><div class="val">0</div></div></div><div class="split"><div class="card"><div class="hd"><h2>Demandas (Geral)</h2><div></div></div><div class="bd"><div class="grid"><div class="grid" style="gap:10px"><div class="row"><div class="field"><label>Status</label><select><option value="">Todos os status</option><option value="Em andamento">Em andamento</option><option value="Atrasada">Atrasada</option><option value="Concluída">Concluída</option><option value="Mapeada">Mapeada</option><option value="Congelada">Congelada</option></select></div><div class="field"><label>Recurso</label><select><option value="">Todos os recursos</option><option value="__NONE__">Sem responsável (Mapeada)</option></select></div><div class="field" style="flex:1;min-width:240px"><label>Pesquisar título</label><input type="search" placeholder="Digite parte do título..." id="dashboardDemandTitleSearch"></div><div class="field"><label>De</label><input type="date"></div><div class="field"><label>Até</label><input type="date"></div></div><div style="display:none"></div></div><div class="donutWrap"><div class="donut empty" style="background:conic-gradient(var(--border) 0 100%);"></div><div class="legend"><div class="item" title="Filtrar demandas: Em andamento"><span class="sw" style="background:var(--indigo)"></span>Em andamento: 0</div><div class="item" title="Filtrar demandas: Atrasada"><span class="sw" style="background:var(--red)"></span>Atrasada: 0</div><div class="item" title="Filtrar demandas: Concluída"><span class="sw" style="background:var(--green)"></span>Concluída: 0</div><div class="item" title="Filtrar demandas: Mapeada"><span class="sw" style="background:var(--slate)"></span>Mapeada: 0</div><div class="item" title="Filtrar demandas: Congelada"><span class="sw" style="background:var(--yellow)"></span>Congelada: 0</div></div></div></div></div></div><div class="card"><div class="hd"><h2>Por Recurso (mês)</h2><div></div></div><div class="bd"><div><div class="scrollX"><table><thead><tr><th>Recurso</th><th>Demandas ativas (mês)</th><th>% médio alocado (mês)</th><th>Pico</th><th>Barra</th></tr></thead><tbody><tr><td colspan="5" style="padding:16px;text-align:center;color:var(--muted)">Cadastre recursos para ver o gráfico por recurso.</td></tr></tbody></table></div><div class="pager"><div class="info">Nenhum item - Página 1 de 1</div><div class="controls"><button class="btn " disabled="">« Início</button><button class="btn " disabled="">‹ Anterior</button><button class="btn " disabled="">Próxima ›</button><button class="btn " disabled="">Final »</button></div></div></div></div></div></div><div class="card"><div class="hd"><h2>Ocupação Consolidada - Ano</h2><div class="row" style="gap:10px;flex-wrap:wrap;justify-content:flex-end"><div class="tag" title="Uso do mês atual (Planejado/Capacidade)">Mês: 0% - Overcap: 0h - Estourados: 0/0</div><button class="btn ghost">Exportar SVG</button><button class="btn ghost">Exportar PNG</button></div></div><div class="bd"><div class="grid" style="gap:10px"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px"><div style="border:1px solid var(--border);border-radius:14px;padding:10px;background:var(--success-soft)"><div class="tiny muted">Ocupação média</div><div class="mono" style="font-weight:950;font-size:18px;line-height:1.15">0%</div><div class="tiny muted" style="margin-top:3px">média dos meses com capacidade</div></div><div style="border:1px solid var(--border);border-radius:14px;padding:10px;background:var(--success-soft)"><div class="tiny muted">Maior pico</div><div class="mono" style="font-weight:950;font-size:18px;line-height:1.15">0%</div><div class="tiny muted" style="margin-top:3px">em jan</div></div><div style="border:1px solid var(--border);border-radius:14px;padding:10px;background:var(--success-soft)"><div class="tiny muted">Meses estourados</div><div class="mono" style="font-weight:950;font-size:18px;line-height:1.15">0</div><div class="tiny muted" style="margin-top:3px">acima de 100%</div></div><div style="border:1px solid var(--border);border-radius:14px;padding:10px;background:var(--success-soft)"><div class="tiny muted">Horas acima da capacidade</div><div class="mono" style="font-weight:950;font-size:18px;line-height:1.15">0h</div><div class="tiny muted" style="margin-top:3px">soma anual de overcap</div></div></div><div style="max-width:100%;overflow:auto"><svg viewBox="0 0 1200 440" width="1200" height="440" style="max-width:100%;height:auto;display:block;" role="img"><rect x="0" y="0" width="1200" height="440" rx="0" fill="#ffffff"></rect><rect x="70" y="34" width="1094" height="98.66666666666669" rx="0" fill="var(--danger-soft)" opacity=".42"></rect><rect x="70" y="132.66666666666669" width="1094" height="197.33333333333331" rx="0" fill="#ffffff"></rect><text x="70" y="20" fill="var(--text)" font-size="16" font-weight="950" text-anchor="start" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">Ocupação Consolidada - Ano</text><text x="1164" y="20" fill="var(--muted)" font-size="11" font-weight="800" text-anchor="end" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">escala visual 0-150%</text><line x1="70" y1="330" x2="1164" y2="330" stroke="var(--border)" stroke-width="1"></line><text x="60" y="334" fill="var(--muted)" font-size="11" font-weight="750" text-anchor="end" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0%</text><line x1="70" y1="270.8" x2="1164" y2="270.8" stroke="var(--border)" stroke-width="1"></line><text x="60" y="274.8" fill="var(--muted)" font-size="11" font-weight="750" text-anchor="end" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">30%</text><line x1="70" y1="211.6" x2="1164" y2="211.6" stroke="var(--border)" stroke-width="1"></line><text x="60" y="215.6" fill="var(--muted)" font-size="11" font-weight="750" text-anchor="end" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">60%</text><line x1="70" y1="152.4" x2="1164" y2="152.4" stroke="var(--border)" stroke-width="1"></line><text x="60" y="156.4" fill="var(--muted)" font-size="11" font-weight="750" text-anchor="end" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">90%</text><line x1="70" y1="93.19999999999999" x2="1164" y2="93.19999999999999" stroke="var(--border)" stroke-width="1"></line><text x="60" y="97.19999999999999" fill="var(--muted)" font-size="11" font-weight="750" text-anchor="end" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">120%</text><line x1="70" y1="34" x2="1164" y2="34" stroke="var(--border)" stroke-width="1"></line><text x="60" y="38" fill="var(--muted)" font-size="11" font-weight="750" text-anchor="end" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">150%</text><line x1="70" y1="132.66666666666669" x2="1164" y2="132.66666666666669" stroke="var(--danger)" stroke-width="2" stroke-dasharray="6 6"></line><text x="1160" y="124.66666666666669" fill="var(--danger)" font-size="12" font-weight="900" text-anchor="end" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">limite 100%</text><rect x="90.96833333333333" y="34" width="49.230000000000004" height="296" rx="12" fill="var(--surface)" opacity="0.72"></rect><rect x="90.96833333333333" y="330" width="49.230000000000004" height="0" rx="12" fill="var(--border)" data-month="jan"><title>jan: 0% de ocupação | Planejado 0h | Capacidade 0h | Livre 0h | Overcap 0h</title></rect><text x="115.58333333333334" y="356" fill="var(--text)" font-size="12" font-weight="800" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">jan</text><text x="115.58333333333334" y="322" fill="var(--text)" font-size="13" font-weight="950" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0%</text><text x="115.58333333333334" y="378" fill="var(--muted)" font-size="10" font-weight="750" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0/0</text><rect x="182.13500000000002" y="34" width="49.230000000000004" height="296" rx="12" fill="var(--surface)" opacity="0.72"></rect><rect x="182.13500000000002" y="330" width="49.230000000000004" height="0" rx="12" fill="var(--border)" data-month="fev"><title>fev: 0% de ocupação | Planejado 0h | Capacidade 0h | Livre 0h | Overcap 0h</title></rect><text x="206.75000000000003" y="356" fill="var(--text)" font-size="12" font-weight="800" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">fev</text><text x="206.75000000000003" y="322" fill="var(--text)" font-size="13" font-weight="950" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0%</text><text x="206.75000000000003" y="378" fill="var(--muted)" font-size="10" font-weight="750" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0/0</text><rect x="273.3016666666667" y="34" width="49.230000000000004" height="296" rx="12" fill="var(--surface)" opacity="0.72"></rect><rect x="273.3016666666667" y="330" width="49.230000000000004" height="0" rx="12" fill="var(--border)" data-month="mar"><title>mar: 0% de ocupação | Planejado 0h | Capacidade 0h | Livre 0h | Overcap 0h</title></rect><text x="297.9166666666667" y="356" fill="var(--text)" font-size="12" font-weight="800" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">mar</text><text x="297.9166666666667" y="322" fill="var(--text)" font-size="13" font-weight="950" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0%</text><text x="297.9166666666667" y="378" fill="var(--muted)" font-size="10" font-weight="750" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0/0</text><rect x="364.4683333333333" y="34" width="49.230000000000004" height="296" rx="12" fill="var(--surface)" opacity="0.72"></rect><rect x="364.4683333333333" y="330" width="49.230000000000004" height="0" rx="12" fill="var(--border)" data-month="abr"><title>abr: 0% de ocupação | Planejado 0h | Capacidade 0h | Livre 0h | Overcap 0h</title></rect><text x="389.0833333333333" y="356" fill="var(--text)" font-size="12" font-weight="800" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">abr</text><text x="389.0833333333333" y="322" fill="var(--text)" font-size="13" font-weight="950" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0%</text><text x="389.0833333333333" y="378" fill="var(--muted)" font-size="10" font-weight="750" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0/0</text><rect x="455.635" y="34" width="49.230000000000004" height="296" rx="12" fill="var(--surface)" opacity="0.72"></rect><rect x="455.635" y="330" width="49.230000000000004" height="0" rx="12" fill="var(--border)" data-month="mai"><title>mai: 0% de ocupação | Planejado 0h | Capacidade 0h | Livre 0h | Overcap 0h</title></rect><rect x="450.635" y="29" width="59.230000000000004" height="306" rx="14" fill="none" stroke="var(--primary)" stroke-width="2" stroke-dasharray="5 5"></rect><text x="480.25" y="356" fill="var(--text)" font-size="12" font-weight="800" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">mai</text><text x="480.25" y="322" fill="var(--text)" font-size="13" font-weight="950" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0%</text><text x="480.25" y="378" fill="var(--muted)" font-size="10" font-weight="750" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0/0</text><rect x="546.8016666666667" y="34" width="49.230000000000004" height="296" rx="12" fill="var(--surface)" opacity="0.72"></rect><rect x="546.8016666666667" y="330" width="49.230000000000004" height="0" rx="12" fill="var(--border)" data-month="jun"><title>jun: 0% de ocupação | Planejado 0h | Capacidade 0h | Livre 0h | Overcap 0h</title></rect><text x="571.4166666666667" y="356" fill="var(--text)" font-size="12" font-weight="800" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">jun</text><text x="571.4166666666667" y="322" fill="var(--text)" font-size="13" font-weight="950" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0%</text><text x="571.4166666666667" y="378" fill="var(--muted)" font-size="10" font-weight="750" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0/0</text><rect x="637.9683333333334" y="34" width="49.230000000000004" height="296" rx="12" fill="var(--surface)" opacity="0.72"></rect><rect x="637.9683333333334" y="330" width="49.230000000000004" height="0" rx="12" fill="var(--border)" data-month="jul"><title>jul: 0% de ocupação | Planejado 0h | Capacidade 0h | Livre 0h | Overcap 0h</title></rect><text x="662.5833333333334" y="356" fill="var(--text)" font-size="12" font-weight="800" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">jul</text><text x="662.5833333333334" y="322" fill="var(--text)" font-size="13" font-weight="950" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0%</text><text x="662.5833333333334" y="378" fill="var(--muted)" font-size="10" font-weight="750" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0/0</text><rect x="729.1350000000001" y="34" width="49.230000000000004" height="296" rx="12" fill="var(--surface)" opacity="0.72"></rect><rect x="729.1350000000001" y="330" width="49.230000000000004" height="0" rx="12" fill="var(--border)" data-month="ago"><title>ago: 0% de ocupação | Planejado 0h | Capacidade 0h | Livre 0h | Overcap 0h</title></rect><text x="753.7500000000001" y="356" fill="var(--text)" font-size="12" font-weight="800" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">ago</text><text x="753.7500000000001" y="322" fill="var(--text)" font-size="13" font-weight="950" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0%</text><text x="753.7500000000001" y="378" fill="var(--muted)" font-size="10" font-weight="750" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0/0</text><rect x="820.3016666666667" y="34" width="49.230000000000004" height="296" rx="12" fill="var(--surface)" opacity="0.72"></rect><rect x="820.3016666666667" y="330" width="49.230000000000004" height="0" rx="12" fill="var(--border)" data-month="set"><title>set: 0% de ocupação | Planejado 0h | Capacidade 0h | Livre 0h | Overcap 0h</title></rect><text x="844.9166666666667" y="356" fill="var(--text)" font-size="12" font-weight="800" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">set</text><text x="844.9166666666667" y="322" fill="var(--text)" font-size="13" font-weight="950" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0%</text><text x="844.9166666666667" y="378" fill="var(--muted)" font-size="10" font-weight="750" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0/0</text><rect x="911.4683333333334" y="34" width="49.230000000000004" height="296" rx="12" fill="var(--surface)" opacity="0.72"></rect><rect x="911.4683333333334" y="330" width="49.230000000000004" height="0" rx="12" fill="var(--border)" data-month="out"><title>out: 0% de ocupação | Planejado 0h | Capacidade 0h | Livre 0h | Overcap 0h</title></rect><text x="936.0833333333334" y="356" fill="var(--text)" font-size="12" font-weight="800" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">out</text><text x="936.0833333333334" y="322" fill="var(--text)" font-size="13" font-weight="950" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0%</text><text x="936.0833333333334" y="378" fill="var(--muted)" font-size="10" font-weight="750" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0/0</text><rect x="1002.635" y="34" width="49.230000000000004" height="296" rx="12" fill="var(--surface)" opacity="0.72"></rect><rect x="1002.635" y="330" width="49.230000000000004" height="0" rx="12" fill="var(--border)" data-month="nov"><title>nov: 0% de ocupação | Planejado 0h | Capacidade 0h | Livre 0h | Overcap 0h</title></rect><text x="1027.25" y="356" fill="var(--text)" font-size="12" font-weight="800" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">nov</text><text x="1027.25" y="322" fill="var(--text)" font-size="13" font-weight="950" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0%</text><text x="1027.25" y="378" fill="var(--muted)" font-size="10" font-weight="750" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0/0</text><rect x="1093.8016666666667" y="34" width="49.230000000000004" height="296" rx="12" fill="var(--surface)" opacity="0.72"></rect><rect x="1093.8016666666667" y="330" width="49.230000000000004" height="0" rx="12" fill="var(--border)" data-month="dez"><title>dez: 0% de ocupação | Planejado 0h | Capacidade 0h | Livre 0h | Overcap 0h</title></rect><text x="1118.4166666666667" y="356" fill="var(--text)" font-size="12" font-weight="800" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">dez</text><text x="1118.4166666666667" y="322" fill="var(--text)" font-size="13" font-weight="950" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0%</text><text x="1118.4166666666667" y="378" fill="var(--muted)" font-size="10" font-weight="750" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">0/0</text><rect x="70" y="412" width="14" height="10" rx="2" fill="var(--success)"></rect><text x="90" y="421" fill="var(--text)" font-size="12" font-weight="800" text-anchor="start" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">Saudável</text><rect x="200" y="412" width="14" height="10" rx="2" fill="var(--warning)"></rect><text x="220" y="421" fill="var(--text)" font-size="12" font-weight="800" text-anchor="start" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">Atenção</text><rect x="320" y="412" width="14" height="10" rx="2" fill="var(--danger)"></rect><text x="340" y="421" fill="var(--text)" font-size="12" font-weight="800" text-anchor="start" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">Acima da capacidade</text><text x="1164" y="421" fill="var(--muted)" font-size="11" font-weight="750" text-anchor="end" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial">rótulo inferior: planejado/capacidade (Horas)</text></svg></div></div></div></div><div class="card"><div class="hd"><h2>Visão Geral</h2><div class="row" style="gap:10px;flex-wrap:wrap;justify-content:flex-end;align-items:center"><div class="row"><button class="btn ghost">◀</button><div class="tag">maio de 2026</div><button class="btn ghost">▶</button></div><div class="legendDropdown"><button class="legendBtn" type="button" title="Abrir menu de legendas" aria-haspopup="true" aria-expanded="false">☰ Legendas<span class="chev">▾</span></button><div class="legendMenu" role="menu"><div class="legendGroup"><div class="legendGroupTitle">Capacidade</div><div class="legendItem"><span class="legendDot ok"></span><span>≤ 80%<small>Alocação confortável</small></span></div><div class="legendItem"><span class="legendDot mid"></span><span>81?100%<small>Próximo do limite</small></span></div><div class="legendItem"><span class="legendDot over"></span><span>&gt; 100%<small>Capacidade excedida</small></span></div></div><div class="legendGroup"><div class="legendGroupTitle">Bloqueios</div><div class="legendItem"><span class="legendDot block"></span><span>Bloqueio<small>Dia sem capacidade</small></span></div><div class="legendItem"><span class="legendDot vac"></span><span>Férias<small>Recurso indisponível</small></span></div><div class="legendItem"><span class="legendDot off"></span><span>Fora vigência<small>Terceiro fora do período</small></span></div></div><div class="legendGroup"><div class="legendGroupTitle">Eventos especiais</div><div class="legendItem"><span class="legendDot holiday"></span><span>Feriado<small>Capacidade zerada</small></span></div><div class="legendItem"><span class="legendDot vac"></span><span>HE<small>Hora extra registrada</small></span></div></div></div></div></div></div><div class="bd"><div><div class="scrollX"><table class="calTable"><thead><tr><th class="stickyCol" style="min-width:220px">Recurso / Dia</th><th class="dayHead " title="01/05/2026"><div class="mono" style="font-weight:900">1</div><div class="tiny">sex</div></th><th class="dayHead bg-wknd" title="02/05/2026"><div class="mono" style="font-weight:900">2</div><div class="tiny">sáb</div></th><th class="dayHead bg-wknd" title="03/05/2026"><div class="mono" style="font-weight:900">3</div><div class="tiny">dom</div></th><th class="dayHead " title="04/05/2026"><div class="mono" style="font-weight:900">4</div><div class="tiny">seg</div></th><th class="dayHead " title="05/05/2026"><div class="mono" style="font-weight:900">5</div><div class="tiny">ter</div></th><th class="dayHead " title="06/05/2026"><div class="mono" style="font-weight:900">6</div><div class="tiny">qua</div></th><th class="dayHead " title="07/05/2026"><div class="mono" style="font-weight:900">7</div><div class="tiny">qui</div></th><th class="dayHead " title="08/05/2026"><div class="mono" style="font-weight:900">8</div><div class="tiny">sex</div></th><th class="dayHead bg-wknd" title="09/05/2026"><div class="mono" style="font-weight:900">9</div><div class="tiny">sáb</div></th><th class="dayHead bg-wknd" title="10/05/2026"><div class="mono" style="font-weight:900">10</div><div class="tiny">dom</div></th><th class="dayHead " title="11/05/2026"><div class="mono" style="font-weight:900">11</div><div class="tiny">seg</div></th><th class="dayHead " title="12/05/2026"><div class="mono" style="font-weight:900">12</div><div class="tiny">ter</div></th><th class="dayHead " title="13/05/2026"><div class="mono" style="font-weight:900">13</div><div class="tiny">qua</div></th><th class="dayHead " title="14/05/2026"><div class="mono" style="font-weight:900">14</div><div class="tiny">qui</div></th><th class="dayHead " title="15/05/2026"><div class="mono" style="font-weight:900">15</div><div class="tiny">sex</div></th><th class="dayHead bg-wknd" title="16/05/2026"><div class="mono" style="font-weight:900">16</div><div class="tiny">sáb</div></th><th class="dayHead bg-wknd" title="17/05/2026"><div class="mono" style="font-weight:900">17</div><div class="tiny">dom</div></th><th class="dayHead " title="18/05/2026"><div class="mono" style="font-weight:900">18</div><div class="tiny">seg</div></th><th class="dayHead " title="19/05/2026"><div class="mono" style="font-weight:900">19</div><div class="tiny">ter</div></th><th class="dayHead " title="20/05/2026"><div class="mono" style="font-weight:900">20</div><div class="tiny">qua</div></th><th class="dayHead " title="21/05/2026"><div class="mono" style="font-weight:900">21</div><div class="tiny">qui</div></th><th class="dayHead " title="22/05/2026"><div class="mono" style="font-weight:900">22</div><div class="tiny">sex</div></th><th class="dayHead bg-wknd" title="23/05/2026"><div class="mono" style="font-weight:900">23</div><div class="tiny">sáb</div></th><th class="dayHead bg-wknd" title="24/05/2026"><div class="mono" style="font-weight:900">24</div><div class="tiny">dom</div></th><th class="dayHead " title="25/05/2026"><div class="mono" style="font-weight:900">25</div><div class="tiny">seg</div></th><th class="dayHead " title="26/05/2026"><div class="mono" style="font-weight:900">26</div><div class="tiny">ter</div></th><th class="dayHead " title="27/05/2026"><div class="mono" style="font-weight:900">27</div><div class="tiny">qua</div></th><th class="dayHead " title="28/05/2026"><div class="mono" style="font-weight:900">28</div><div class="tiny">qui</div></th><th class="dayHead " title="29/05/2026"><div class="mono" style="font-weight:900">29</div><div class="tiny">sex</div></th><th class="dayHead bg-wknd" title="30/05/2026"><div class="mono" style="font-weight:900">30</div><div class="tiny">sáb</div></th><th class="dayHead bg-wknd" title="31/05/2026"><div class="mono" style="font-weight:900">31</div><div class="tiny">dom</div></th></tr></thead><tbody><tr><td colspan="32" style="padding:34px;text-align:center;color:var(--muted)">Nenhum recurso cadastrado. Vá em "Recursos" para começar.</td></tr></tbody></table></div><div class="pager"><div class="info">Nenhum item - Página 1 de 1</div><div class="controls"><button class="btn " disabled="">« Início</button><button class="btn " disabled="">‹ Anterior</button><button class="btn " disabled="">Próxima ›</button><button class="btn " disabled="">Final »</button></div></div></div></div></div></div></main>
+  <footer class="appFooter">© 2026 ORIZON Planning. All rights reserved. Unauthorized reproduction, distribution, or modification is prohibited. Developed by Arthur Basílio.</footer>
+
   <div class="toast" id="toast"></div>
 
   <dialog id="dayModal" class="modal">
@@ -967,7 +1128,7 @@ main{padding:14px;overflow-x:hidden}
   const DB_META_KEY = 'capview_db_meta';
   const DB_BASELINE_KEY = 'capview_db_baseline';
   const APP_SCHEMA_VERSION = '0.2.3-demand-metrics';
-  const HOURS_PER_DAY = 9; // regra fixa: 9h/dia para todos os recursos
+  const HOURS_PER_DAY = 9; // Interno: 9h/dia
   const HOURS_PER_DAY_THIRD = 8; // Terceiro: 8h/dia
   const PAGE_SIZE = 10; // itens por página (Demandas e Recursos)
   const CALENDAR_PAGE_SIZE = 10; // itens por página (Bloqueios e Feriados)
@@ -1157,7 +1318,9 @@ main{padding:14px;overflow-x:hidden}
 
   const normalizedPersonName = (name) => String(name || '')
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-    .trim().toLowerCase().replace(/\s+/g,' ');
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim().replace(/\s+/g,' ');
 
   const ownerFromLegacyResourceId = (id) => {
     const raw = String(id || '').trim();
@@ -1171,6 +1334,19 @@ main{padding:14px;overflow-x:hidden}
     const slug = slugify(name) || 'recurso';
     return `legacy-owner::${slug}`;
   };
+
+  const isSyntheticLegacyOwnerId = (id) => {
+    const raw = String(id || '').trim().toLowerCase();
+    return raw.startsWith('legacy-owner::') || raw.startsWith('legacy-owner_') || raw.startsWith('legacy-owner-');
+  };
+
+  const isSyntheticLegacyOwnerEventFilename = (filename='') => {
+    const base = String(filename || '').trim().replace(/\.json$/i, '').toLowerCase();
+    return isSyntheticLegacyOwnerId(base);
+  };
+
+  const normalizeEventFilenameBaseToOwnerId = (filename='') =>
+    String(filename || '').trim().replace(/\.json$/i, '').replace(/^legacy-owner_/, 'legacy-owner::');
 
   const normalizeLegacyResource = (resource, opts={}) => {
     if (!resource || typeof resource !== 'object' || Array.isArray(resource)) return resource;
@@ -1935,7 +2111,8 @@ main{padding:14px;overflow-x:hidden}
           key === DB_META_KEY ||
           key === DB_BASELINE_KEY ||
           key.startsWith('capview_') ||
-          key.startsWith('resource_planner_')
+          key.startsWith('resource_planner_') ||
+          key.startsWith('orizon_')
         ) keys.push(key);
       }
       for (const key of keys) localStorage.removeItem(key);
@@ -2390,6 +2567,13 @@ main{padding:14px;overflow-x:hidden}
   };
   const parseApontamentoHours = (value) => parseHoursInput(value);
 
+  const decimalHoursToHHMM = (value) => {
+    const totalMinutes = Math.max(0, Math.round(Number(value || 0) * 60));
+    const hh = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
+    const mm = String(totalMinutes % 60).padStart(2, '0');
+    return `${hh}:${mm}`;
+  };
+
   const isISODateString = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || '').trim());
 
   const sortApontamentosChronological = (items=[]) => [...items].sort((a,b) => {
@@ -2446,7 +2630,9 @@ main{padding:14px;overflow-x:hidden}
       }
     }
 
-    const plannedHours = Math.round((plannedDays * HOURS_PER_DAY * (percent / 100)) * 100) / 100;
+    const plannedResource = (state.resources || []).find(r => String(r.id || '') === String(resourceId || ''));
+    const plannedHoursPerDay = getResourceHoursPerDay(plannedResource);
+    const plannedHours = Math.round((plannedDays * plannedHoursPerDay * (percent / 100)) * 100) / 100;
     const delta = Math.round((plannedHours - realHours) * 100) / 100; // saldo: horas planejadas restantes; negativo = acima do planejado
     const progressPct = plannedHours > 0 ? Math.round((realHours / plannedHours) * 1000) / 10 : (realHours > 0 ? 100 : 0);
     const efficiencyPct = plannedHours > 0 ? Math.round((realHours / plannedHours) * 1000) / 10 : null;
@@ -2818,6 +3004,8 @@ main{padding:14px;overflow-x:hidden}
   };
 
   // paginação (não persistida)
+  let editingInternalActivityId = '';
+
   const uiPagination = {
     demandsPage: 1,
     resourcesPage: 1,
@@ -3588,6 +3776,7 @@ main{padding:14px;overflow-x:hidden}
       av.classList.remove('warn');
       av.title = userId ? `ID: ${userId}` : '';
     }
+    try { if (typeof updateNotificationsBell === 'function') updateNotificationsBell(); } catch {}
   };
 
   const setUser = (name) => {
@@ -3611,7 +3800,15 @@ main{padding:14px;overflow-x:hidden}
     if (!sharedFolderReady()) { toast('Selecione a pasta de eventos antes de salvar o usuário.'); return false; }
     if (!createNew && !selectedId) { toast('Selecione um usuário existente ou crie um novo.'); return false; }
 
-    const finalUser = createNew ? { displayName:nm, userId:(selectedId || previewUserIdentity(nm).userId) } : { displayName:nm, userId:selectedId };
+    let finalUser = createNew ? { displayName:nm, userId:(selectedId || previewUserIdentity(nm).userId) } : { displayName:nm, userId:selectedId };
+    if (createNew) {
+      try { await scanEventFolderUsers(); } catch {}
+      const existing = preferredExistingUserForName(nm);
+      if (existing?.userId) {
+        finalUser = { displayName: existing.displayName || nm, userId: existing.userId };
+        toast(`Usuário já existia em /events; identidade existente reutilizada: ${existing.userId}.`);
+      }
+    }
     userName = finalUser.displayName;
     userId = finalUser.userId;
     persistUserIdentity(finalUser);
@@ -3849,20 +4046,44 @@ main{padding:14px;overflow-x:hidden}
 
   const resourceOwnerId = (resource) => String(resource?.owner_user_id || resource?.ownerUserId || '').trim();
 
-  const userIdentityForResourceName = (displayName='') => {
+  const identityPriorityScore = (identity={}) => {
+    let score = 0;
+    if (String(identity.userId || '').trim() === String(userId || '').trim()) score += 1000;
+    if (String(identity.resourceId || '').trim()) score += 100;
+    if (Number(identity.eventCount || 0) > 0) score += 60;
+    const sources = Array.isArray(identity.sources) ? identity.sources : [identity.source || ''];
+    if (sources.some(src => /snapshot\.resources|events\.payload|ADD_RESOURCE|UPDATE_RESOURCE/i.test(String(src || '')))) score += 20;
+    if (sources.some(src => /events\.metadata/i.test(String(src || '')))) score += 10;
+    if (sources.some(src => /events\.filename/i.test(String(src || '')))) score += 5;
+    return score;
+  };
+
+  const choosePreferredUserIdentity = (identities=[], fallbackName='') => {
+    const unique = (identities || [])
+      .filter(item => item && String(item.userId || '').trim() && !isSyntheticLegacyOwnerId(item.userId))
+      .filter((item, idx, arr) => arr.findIndex(x => String(x.userId || '').trim() === String(item.userId || '').trim()) === idx);
+    if (!unique.length) return null;
+    return [...unique].sort((a,b) => {
+      const scoreDiff = identityPriorityScore(b) - identityPriorityScore(a);
+      if (scoreDiff) return scoreDiff;
+      return String(a.userId || '').localeCompare(String(b.userId || ''), 'pt-BR');
+    })[0] || { displayName:fallbackName, userId:'' };
+  };
+
+  const existingUserIdentitiesForName = (displayName='') => {
     const nm = String(displayName || '').trim();
-    if (!nm) return { displayName:'', userId:'' };
+    if (!nm) return [];
     const key = normalizedPersonName(nm);
     const candidates = [];
     for (const u of (scannedEventUsers || [])) {
       if (normalizedPersonName(u?.displayName) === key && u?.userId) {
-        candidates.push({ displayName: String(u.displayName || nm).trim(), userId: String(u.userId).trim(), source:'events' });
+        candidates.push({ ...u, displayName: String(u.displayName || nm).trim(), userId: String(u.userId).trim(), source:u.source || 'events' });
       }
     }
     for (const r of (state.resources || [])) {
       const owner = resourceOwnerId(r);
       if (owner && normalizedPersonName(r?.nome || r?.name) === key) {
-        candidates.push({ displayName: String(r.nome || r.name || nm).trim(), userId: owner, source:'resources' });
+        candidates.push({ displayName: String(r.nome || r.name || nm).trim(), userId: owner, resourceId:String(r.id || '').trim(), source:'resources' });
       }
     }
     for (const ev of (state.events || [])) {
@@ -3870,18 +4091,32 @@ main{padding:14px;overflow-x:hidden}
       const payload = ev.payload || {};
       const owner = resourceOwnerId(payload);
       if (owner && normalizedPersonName(payload?.nome || payload?.name) === key) {
-        candidates.push({ displayName: String(payload.nome || payload.name || nm).trim(), userId: owner, source:'events.payload' });
+        candidates.push({ displayName: String(payload.nome || payload.name || nm).trim(), userId: owner, resourceId:String(payload.id || '').trim(), source:'events.payload' });
       }
     }
-    const unique = candidates.filter((item, idx, arr) => item.userId && arr.findIndex(x => x.userId === item.userId) === idx);
-    if (unique.length === 1) return unique[0];
+    return candidates.filter((item, idx, arr) => item.userId && arr.findIndex(x => String(x.userId) === String(item.userId)) === idx);
+  };
+
+  const preferredExistingUserForName = (displayName='') => choosePreferredUserIdentity(existingUserIdentitiesForName(displayName), displayName);
+
+  const userIdentityForResourceName = (displayName='') => {
+    const nm = String(displayName || '').trim();
+    if (!nm) return { displayName:'', userId:'' };
+    const existing = existingUserIdentitiesForName(nm);
+    const preferred = choosePreferredUserIdentity(existing, nm);
+    if (preferred) {
+      if (existing.length > 1) {
+        console.warn('[ORIZON Usuários] Nome de usuário duplicado detectado; reutilizando identidade preferida para evitar novo arquivo:', { nome:nm, escolhido:preferred.userId, encontrados:existing.map(u => u.userId) });
+      }
+      return preferred;
+    }
     return previewUserIdentity(nm);
   };
 
   const ensureResourceUserEventFile = async (resource, opts={}) => {
     const owner = resourceOwnerId(resource);
     const displayName = String(resource?.nome || resource?.name || '').trim();
-    if (!owner || !displayName || !sharedFolderReady()) return false;
+    if (!owner || isSyntheticLegacyOwnerId(owner) || !displayName || !sharedFolderReady()) return false;
     try {
       const { safeName } = await getEventFileHandleForIdentity(owner, displayName);
       if (opts.toast !== false) toast(`Usuário ${displayName} criado em /events/${safeName}.json.`);
@@ -3898,7 +4133,8 @@ main{padding:14px;overflow-x:hidden}
     if (!sharedFolderReady()) return 0;
     let created = 0;
     for (const resource of (state.resources || [])) {
-      if (!resourceOwnerId(resource) || !String(resource?.nome || resource?.name || '').trim()) continue;
+      const owner = resourceOwnerId(resource);
+      if (!owner || isSyntheticLegacyOwnerId(owner) || !String(resource?.nome || resource?.name || '').trim()) continue;
       if (await ensureResourceUserEventFile(resource, { toast:false })) created += 1;
     }
     if (created && opts.toast !== false) toast(`${created} arquivo(s) de usuário conferido(s) em /events.`);
@@ -4232,25 +4468,80 @@ main{padding:14px;overflow-x:hidden}
     return true;
   };
 
-  const fileTextOrDefault = async (handle, fallback='') => {
-    try { const file = await handle.getFile(); const txt = await file.text(); return String(txt || fallback || ''); }
-    catch { return String(fallback || ''); }
+  const fileTextOrDefault = async (handle, fallback='', opts={}) => {
+    try {
+      const file = await handle.getFile();
+      const txt = await file.text();
+      return String(txt || fallback || '');
+    } catch (err) {
+      if (opts.throwOnReadError) throw err;
+      return String(fallback || '');
+    }
   };
 
   const writeTextToFileHandle = async (handle, text) => {
-    const writable = await handle.createWritable();
-    await writable.write(String(text || ''));
-    await writable.close();
+    const expected = String(text ?? '');
+    let writable = null;
+    try {
+      writable = await handle.createWritable();
+      await writable.write(expected);
+      await writable.close();
+      writable = null;
+    } catch (err) {
+      if (writable) {
+        try {
+          if (typeof writable.abort === 'function') await writable.abort();
+          else await writable.close();
+        } catch {}
+      }
+      throw err;
+    }
+    // Confirma a gravação imediatamente. Em pastas de rede/sincronizadas, uma falha
+    // no close() pode deixar o arquivo recém-criado com 0 bytes; nesse caso mantemos
+    // o evento no outbox e não mascaramos o problema como sucesso.
+    try {
+      const file = await handle.getFile();
+      const actual = await file.text();
+      if (String(actual) !== expected) throw new Error('Conteúdo verificado difere do conteúdo gravado.');
+    } catch (err) {
+      const verifyError = new Error('Gravação não confirmada no arquivo: ' + (err?.message || 'falha de verificação'));
+      verifyError.name = 'FileWriteVerificationError';
+      verifyError.cause = err;
+      throw verifyError;
+    }
   };
   const stringifyJsonForFile = (obj, opts={}) => opts.pretty === true
     ? JSON.stringify(obj, null, 2)
     : JSON.stringify(obj);
   const writeJsonToFileHandle = async (handle, obj, opts={}) => writeTextToFileHandle(handle, stringifyJsonForFile(obj, opts));
+  const compactSharedEventForStorage = (event) => {
+    if (!event || !event.id) return null;
+    if (isConsolidatedEventReceipt(event)) return compactConsolidatedEventReceipt(event);
+    const out = { ...event };
+    delete out.sourceFile;
+    delete out.status;
+    if (out.consolidated === true && Object.prototype.hasOwnProperty.call(out, 'payload')) {
+      return compactConsolidatedEventReceipt(out);
+    }
+    return out;
+  };
+  const compactSharedEventsForStorage = (events=[]) =>
+    mergeEventListsUnique(events).map(compactSharedEventForStorage).filter(e => e && e.id);
+  const eventFileEnvelopeForIdentity = (identityId='', identityName='', events=[]) => ({
+    user: {
+      userId: String(identityId || '').trim(),
+      displayName: String(identityName || '').trim(),
+    },
+    events: compactSharedEventsForStorage(events),
+    meta: { schema: 'orizon-user-events-v2' }
+  });
 
   const ensureEventFolderReady = async ({ createSnapshotIfMissing=true } = {}) => {
     if (!capviewDataDirHandle || !capviewEventsDirHandle || !capviewSnapshotFileHandle) throw new Error('Selecione a pasta ORIZONData primeiro.');
     if (createSnapshotIfMissing) {
-      const txt = await fileTextOrDefault(capviewSnapshotFileHandle, '');
+      let txt = '';
+      try { txt = await fileTextOrDefault(capviewSnapshotFileHandle, '', { throwOnReadError:true }); }
+      catch (err) { throw new Error('Não foi possível ler snapshot.json; nada foi sobrescrito. Reconecte a pasta ORIZONData.'); }
       if (!String(txt||'').trim()) await writeJsonToFileHandle(capviewSnapshotFileHandle, normalizeImportedState(buildDbExportObject()));
     }
     return true;
@@ -4260,8 +4551,10 @@ main{padding:14px;overflow-x:hidden}
     ensureEventUser();
     await ensureEventFolderReady({ createSnapshotIfMissing:true });
     const handle = await capviewEventsDirHandle.getFileHandle(eventSafeName() + '.json', { create:true });
-    const txt = await fileTextOrDefault(handle, '');
-    if (!String(txt || '').trim()) await writeJsonToFileHandle(handle, []);
+    let txt = '';
+    try { txt = await fileTextOrDefault(handle, '', { throwOnReadError:true }); }
+    catch (err) { throw new Error('Não foi possível ler o arquivo de eventos do usuário; nada foi sobrescrito.'); }
+    if (!String(txt || '').trim()) await writeJsonToFileHandle(handle, eventFileEnvelopeForIdentity(userId, userName, []));
     return handle;
   };
 
@@ -4280,8 +4573,10 @@ main{padding:14px;overflow-x:hidden}
       capviewEventMode.lastStatus = 'Pasta vinculada. Alterações seráo registradas em /events por usuário.';
       persistEventFolderMeta();
       await ensureEventFolderReady({ createSnapshotIfMissing:true });
+      await cleanupSyntheticLegacyOwnerEventFiles();
       if (opts.requireUser !== false) await ensureUserEventFileInitialized();
       await ensureResourceUserEventFiles({ toast:false });
+      await cleanupDuplicateEmptyEventUserFiles();
       try { stopDbWatcher(); } catch {}
       disableDbAutoSyncForEventMode();
       const flushed = await flushLocalEventOutbox();
@@ -4303,20 +4598,122 @@ main{padding:14px;overflow-x:hidden}
     await ensureEventFolderReady({ createSnapshotIfMissing:true });
     const safeName = eventSafeNameForIdentity(identityId, identityName);
     const handle = await capviewEventsDirHandle.getFileHandle(safeName + '.json', { create:true });
-    const txt = await fileTextOrDefault(handle, '');
-    if (!String(txt || '').trim()) await writeJsonToFileHandle(handle, []);
+    let txt = '';
+    try { txt = await fileTextOrDefault(handle, '', { throwOnReadError:true }); }
+    catch (err) { throw new Error('Não foi possível ler /events/' + safeName + '.json; nada foi sobrescrito.'); }
+    if (!String(txt || '').trim()) await writeJsonToFileHandle(handle, eventFileEnvelopeForIdentity(identityId, identityName, []));
     return { handle, safeName };
   };
 
-  const readEventArrayFromHandle = async (handle) => {
+  const readEventFileDocument = async (handle) => {
     const txt = await fileTextOrDefault(handle, '[]');
-    if (!String(txt||'').trim()) return [];
+    if (!String(txt||'').trim()) return { raw:'', parsed:null, events:[], user:null, invalid:false };
     try {
       const parsed = JSON.parse(txt);
-      if (Array.isArray(parsed)) return parsed.filter(e => e && e.id);
-      if (parsed && Array.isArray(parsed.events)) return parsed.events.filter(e => e && e.id);
-    } catch (e) { console.warn('[ORIZON Eventos] Arquivo de eventos inválido:', handle?.name, e); }
-    return [];
+      if (Array.isArray(parsed)) return { raw:txt, parsed, events:parsed.filter(e => e && e.id), user:null, invalid:false };
+      if (parsed && typeof parsed === 'object') {
+        const user = (parsed.user && typeof parsed.user === 'object') ? parsed.user : null;
+        return { raw:txt, parsed, events:Array.isArray(parsed.events) ? parsed.events.filter(e => e && e.id) : [], user, invalid:false };
+      }
+    } catch (e) {
+      console.warn('[ORIZON Eventos] Arquivo de eventos inválido:', handle?.name, e);
+      return { raw:txt, parsed:null, events:[], user:null, invalid:true };
+    }
+    return { raw:txt, parsed:null, events:[], user:null, invalid:false };
+  };
+
+  const readEventArrayFromHandle = async (handle) => (await readEventFileDocument(handle)).events;
+
+  const cleanupSyntheticLegacyOwnerEventFiles = async () => {
+    if (!sharedFolderReady() || !capviewEventsDirHandle || typeof capviewEventsDirHandle.removeEntry !== 'function') return 0;
+    let removed = 0;
+    try {
+      for await (const [name, handle] of capviewEventsDirHandle.entries()) {
+        if (!handle || handle.kind !== 'file') continue;
+        if (!String(name || '').toLowerCase().endsWith('.json')) continue;
+        if (!isSyntheticLegacyOwnerEventFilename(name)) continue;
+        const doc = await readEventFileDocument(handle);
+        const docUserId = String(doc.user?.userId || doc.user?.id || normalizeEventFilenameBaseToOwnerId(name)).trim();
+        const onlyLegacyOwnerEnvelope = isSyntheticLegacyOwnerId(docUserId) && !doc.invalid && !(doc.events || []).length;
+        if (!onlyLegacyOwnerEnvelope) continue;
+        await capviewEventsDirHandle.removeEntry(name);
+        removed += 1;
+      }
+    } catch (err) {
+      console.warn('[ORIZON Eventos] Falha ao limpar arquivos legacy-owner vazios:', err);
+    }
+    if (removed) setEventModeStatus(`${removed} arquivo(s) legacy-owner vazio(s) removido(s) de /events.`);
+    return removed;
+  };
+
+  const eventUserIdentityFromFile = async (name, handle) => {
+    const fileUser = userFromEventFilename(name);
+    let docUser = null;
+    let eventCount = 0;
+    let invalid = false;
+    try {
+      const doc = await readEventFileDocument(handle);
+      eventCount = Array.isArray(doc.events) ? doc.events.length : 0;
+      invalid = !!doc.invalid;
+      if (doc.user && (doc.user.userId || doc.user.displayName)) {
+        docUser = {
+          userId: String(doc.user.userId || doc.user.id || '').trim(),
+          displayName: String(doc.user.displayName || doc.user.name || '').trim(),
+          source:'events.metadata',
+          sourceFile:String(name || '').trim(),
+          eventCount
+        };
+      }
+    } catch { invalid = true; }
+    const user = docUser?.userId ? { ...fileUser, ...docUser, sources:[fileUser?.source, docUser.source].filter(Boolean) } : fileUser;
+    return user ? { ...user, eventCount, invalid, sourceFile:String(name || '').trim() } : null;
+  };
+
+  const cleanupDuplicateEmptyEventUserFiles = async () => {
+    if (!sharedFolderReady() || !capviewEventsDirHandle || typeof capviewEventsDirHandle.removeEntry !== 'function') return 0;
+    const byName = new Map();
+    try {
+      for await (const [name, handle] of capviewEventsDirHandle.entries()) {
+        if (!handle || handle.kind !== 'file') continue;
+        if (!String(name || '').toLowerCase().endsWith('.json')) continue;
+        if (isSyntheticLegacyOwnerEventFilename(name)) continue;
+        const user = await eventUserIdentityFromFile(name, handle);
+        const key = normalizedPersonName(user?.displayName);
+        if (!user || !user.userId || !key || isSyntheticLegacyOwnerId(user.userId)) continue;
+        if (!byName.has(key)) byName.set(key, []);
+        byName.get(key).push(user);
+      }
+      let removed = 0;
+      for (const users of byName.values()) {
+        const unique = users.filter((item, idx, arr) => arr.findIndex(x => String(x.userId) === String(item.userId)) === idx);
+        if (unique.length < 2) continue;
+        const keep = choosePreferredUserIdentity(unique) || unique[0];
+        for (const duplicate of unique) {
+          if (String(duplicate.userId) === String(keep.userId)) continue;
+          if (String(duplicate.userId) === String(userId || '').trim()) continue;
+          if (duplicate.invalid || Number(duplicate.eventCount || 0) > 0 || !duplicate.sourceFile) continue;
+          await capviewEventsDirHandle.removeEntry(duplicate.sourceFile);
+          removed += 1;
+        }
+      }
+      if (removed) setEventModeStatus(`${removed} arquivo(s) duplicado(s) vazio(s) removido(s) de /events.`);
+      return removed;
+    } catch (err) {
+      console.warn('[ORIZON Eventos] Falha ao limpar usuários duplicados vazios:', err);
+      return 0;
+    }
+  };
+
+  const writeEventArrayToHandle = async (handle, events, identityId='', identityName='', opts={}) => {
+    const current = opts.currentDoc || await readEventFileDocument(handle);
+    const existingUser = (current.user && typeof current.user === 'object') ? current.user : {};
+    const envelope = eventFileEnvelopeForIdentity(
+      identityId || existingUser.userId || existingUser.id || '',
+      identityName || existingUser.displayName || existingUser.name || '',
+      Array.isArray(events) ? events : []
+    );
+    envelope.meta = { schema: 'orizon-user-events-v2' };
+    await writeJsonToFileHandle(handle, envelope);
   };
 
   const eventArchiveFolderName = (date=new Date()) => {
@@ -4341,14 +4738,15 @@ main{padding:14px;overflow-x:hidden}
     for await (const [name, handle] of capviewEventsDirHandle.entries()) {
       if (!handle || handle.kind !== 'file') continue;
       if (!String(name || '').toLowerCase().endsWith('.json')) continue;
-      const current = await readEventArrayFromHandle(handle);
+      const currentDoc = await readEventFileDocument(handle);
+      const current = currentDoc.events || [];
       const archived = current.filter(ev => ev && ev.id && consolidatedIds.has(String(ev.id)));
       if (!archived.length) continue;
       const remaining = current.filter(ev => !ev || !ev.id || !consolidatedIds.has(String(ev.id)));
       const archiveHandle = await archiveDir.getFileHandle(name, { create:true });
       const archiveCurrent = await readEventArrayFromHandle(archiveHandle);
-      await writeJsonToFileHandle(archiveHandle, mergeEventListsUnique(archiveCurrent, archived), { pretty:true });
-      await writeJsonToFileHandle(handle, remaining);
+      await writeJsonToFileHandle(archiveHandle, mergeEventListsUnique(archiveCurrent, archived));
+      await writeEventArrayToHandle(handle, remaining, '', '', { currentDoc });
       archivedEventCount += archived.length;
       activeFilesTouched += 1;
       archivedFiles.push(String(name));
@@ -4358,7 +4756,7 @@ main{padding:14px;overflow-x:hidden}
       const snapshotArchiveHandle = await archiveDir.getFileHandle('_snapshot_events_before_compact.json', { create:true });
       const archiveCurrent = await readEventArrayFromHandle(snapshotArchiveHandle);
       const uniqueSnapshotEvents = mergeEventListsUnique(archiveCurrent, snapshotEventsToPreserve);
-      await writeJsonToFileHandle(snapshotArchiveHandle, uniqueSnapshotEvents, { pretty:true });
+      await writeJsonToFileHandle(snapshotArchiveHandle, uniqueSnapshotEvents);
       archivedEventCount += snapshotEventsToPreserve.length;
       archivedFiles.push('_snapshot_events_before_compact.json');
     }
@@ -4372,14 +4770,16 @@ main{padding:14px;overflow-x:hidden}
   };
 
   const writeSingleEventToUserFile = async (event) => {
-    const targetUserId = String(event?.user_id || event?.userId || userId || '').trim();
+    const rawTargetUserId = String(event?.user_id || event?.userId || userId || '').trim();
+    const targetUserId = isSyntheticLegacyOwnerId(rawTargetUserId) ? String(userId || '').trim() : rawTargetUserId;
     const targetUserName = String(event?.user || event?.userName || userName || '').trim();
+    if (!targetUserId || isSyntheticLegacyOwnerId(targetUserId)) throw new Error('Evento sem usuário real; arquivo legacy-owner não será criado.');
     const { handle, safeName } = await getEventFileHandleForIdentity(targetUserId, targetUserName);
     const arr = await readEventArrayFromHandle(handle);
     if (!arr.some(e => String(e.id) === String(event.id))) {
-      arr.push({ ...event, status:'pending', sourceFile:safeName + '.json' });
+      arr.push(compactSharedEventForStorage(event));
       arr.sort((a,b) => Number(a.timestamp||0) - Number(b.timestamp||0));
-      await writeJsonToFileHandle(handle, arr);
+      await writeEventArrayToHandle(handle, arr, targetUserId, targetUserName);
     }
     // Verificação pós-gravação: evita falso positivo se o navegador negar escrita.
     const check = await readEventArrayFromHandle(handle);
@@ -4459,7 +4859,7 @@ main{padding:14px;overflow-x:hidden}
     const r = normalizeLegacyResource(resource || {});
     const owner = String(r.owner_user_id || '').trim();
     const name = String(r.nome || r.name || r.createdBy || '').trim();
-    if (!owner || !name) return null;
+    if (!owner || isSyntheticLegacyOwnerId(owner) || !name) return null;
     return { userId: owner, displayName: name, resourceId: String(r.id || ''), source, resource: r };
   };
   const displayNameFromEventFileSlug = (slug='') => String(slug || '')
@@ -4470,6 +4870,7 @@ main{padding:14px;overflow-x:hidden}
     .trim();
   const userFromEventFilename = (filename='') => {
     const base = String(filename || '').trim().replace(/\.json$/i, '');
+    if (isSyntheticLegacyOwnerEventFilename(base)) return null;
     const match = base.match(/^(.+?)__([a-z0-9]{4,})$/i);
     if (!match) return null;
     const displayName = displayNameFromEventFileSlug(match[1]);
@@ -4483,8 +4884,8 @@ main{padding:14px;overflow-x:hidden}
       for await (const [name, handle] of capviewEventsDirHandle.entries()) {
         if (!handle || handle.kind !== 'file') continue;
         if (!String(name || '').toLowerCase().endsWith('.json')) continue;
-        const user = userFromEventFilename(name);
-        if (user) users.push(user);
+        const user = await eventUserIdentityFromFile(name, handle);
+        if (user && !isSyntheticLegacyOwnerId(user.userId)) users.push(user);
       }
     } catch (e) { console.warn('[ORIZON Usuários] Falha ao ler nomes dos arquivos de eventos:', e); }
     return users;
@@ -4492,6 +4893,8 @@ main{padding:14px;overflow-x:hidden}
 
   const scanEventFolderUsers = async () => {
     await ensureEventFolderReady({ createSnapshotIfMissing:true });
+    await cleanupSyntheticLegacyOwnerEventFiles();
+    await cleanupDuplicateEmptyEventUserFiles();
     const snapshot = await readSnapshotFromEventFolder();
     const sharedEvents = await readAllSharedEvents();
     const fileUsers = await scanEventFolderUserFiles();
@@ -4520,17 +4923,21 @@ main{padding:14px;overflow-x:hidden}
       if (ev.user_id && ev.user) add({ userId: ev.user_id, displayName: ev.user, source:'snapshot.events' }, { requireEventFile:true });
       if ((ev.type === 'ADD_RESOURCE' || ev.type === 'UPDATE_RESOURCE') && ev.payload) add(resourceUserRecord(ev.payload, 'snapshot.events.payload'), { requireEventFile:true });
     }
-    const users = [...byId.values()].sort((a,b) => String(a.displayName).localeCompare(String(b.displayName), 'pt-BR'));
+    const rawUsers = [...byId.values()];
     const byName = new Map();
-    for (const u of users) {
+    for (const u of rawUsers) {
       const key = normalizedPersonName(u.displayName);
       if (!key) continue;
-      if (!byName.has(key)) byName.set(key, new Set());
-      byName.get(key).add(u.userId);
+      if (!byName.has(key)) byName.set(key, []);
+      byName.get(key).push(u);
     }
     const diagnostics = [...byName.entries()]
-      .filter(([, ids]) => ids.size > 1)
-      .map(([name, ids]) => ({ type:'duplicate-name-distinct-users', name, userIds:[...ids] }));
+      .filter(([, items]) => new Set(items.map(u => String(u.userId || ''))).size > 1)
+      .map(([name, items]) => ({ type:'duplicate-name-distinct-users', name, userIds:[...new Set(items.map(u => String(u.userId || '')))] }));
+    const users = [...byName.values()]
+      .map(items => choosePreferredUserIdentity(items) || items[0])
+      .filter(Boolean)
+      .sort((a,b) => String(a.displayName).localeCompare(String(b.displayName), 'pt-BR'));
     scannedEventUsers = users;
     scannedEventDiagnostics = diagnostics;
     if (diagnostics.length) console.warn('[ORIZON Usuários] Mesmo nome com user_id diferente:', diagnostics);
@@ -5302,8 +5709,7 @@ main{padding:14px;overflow-x:hidden}
       const q = (respSearch.value||'').trim().toLowerCase();
       const available = (state.resources||[])
         .filter(r => !selectedRespIds.has(r.id))
-        .filter(r => !q || String(r.nome||'').toLowerCase().includes(q) || String(r.tipo||'').toLowerCase().includes(q))
-        .slice(0, 12);
+        .filter(r => !q || String(r.nome||'').toLowerCase().includes(q) || String(r.tipo||'').toLowerCase().includes(q));
       respMenu.innerHTML = '';
       if (!available.length) {
         respMenu.appendChild(el('div', { class:'multiSelectEmpty' }, [q ? 'Nenhum responsável encontrado.' : 'Todos os responsáveis já foram selecionados.']));
@@ -5334,8 +5740,11 @@ main{padding:14px;overflow-x:hidden}
       respChips.innerHTML = '';
       respAllocList.innerHTML = '';
       const ids = [...selectedRespIds];
-      respAllocEditor.style.display = ids.length >= 2 ? '' : 'none';
-      respAllocList.style.display = ids.length >= 2 ? 'none' : '';
+      respAllocEditor.style.display = 'none';
+      respAllocList.style.display = '';
+      if (!ids.length) {
+        respAllocList.appendChild(el('div', { class:'respAllocEmpty' }, ['Adicione um responsável para informar a dedicação diária.']));
+      }
       respAllocPick.innerHTML = '';
       for (const rid of ids) respAllocPick.appendChild(el('option', { value: rid }, [getRespName(rid)]));
       if (ids.length >= 2) {
@@ -5357,11 +5766,11 @@ main{padding:14px;overflow-x:hidden}
           syncMapeada();
         });
         respChips.appendChild(chip);
-        const pct = el('input', { type:'number', min:'0', max:'100', step:'5', value:String(respPctById.get(rid) ?? 100), disabled: ids.length >= 2 ? '' : null });
+        const pct = el('input', { type:'number', min:'0', max:'100', step:'5', value:String(respPctById.get(rid) ?? 100), title:'Percentual do dia reservado para este responsável' });
         pct.addEventListener('input', () => { respPctById.set(rid, Number(pct.value || 0)); renderApontamentos(); });
         respAllocList.appendChild(el('div', { class:'respAllocRow' }, [
           el('div', { class:'respAllocName', title:getRespName(rid) }, [getRespName(rid)]),
-          el('div', { class:'respAllocPct' }, [el('label', {}, ['% diário']), pct]),
+          el('div', { class:'respAllocPct' }, [el('label', {}, ['% do dia reservado']), pct]),
         ]));
       }
     };
@@ -5786,10 +6195,24 @@ main{padding:14px;overflow-x:hidden}
         el('div', { class:'field', style:'flex:1' }, [el('label', {}, ['Prédio']), predio]),
         el('div', { class:'field', style:'flex:1' }, [el('label', {}, ['Focal']), focal]),
       ]),
+      el('div', { class:'row demandEditAllocRow' }, [
+        el('div', { class:'field demandRespField' }, [
+          el('label', {}, ['Responsáveis alocados']),
+          responsavel,
+          el('div', { class:'multiSelectHint' }, ['Busque pelo nome e clique para adicionar ou remover pessoas da demanda.'])
+        ]),
+        el('div', { class:'field demandStatusField' }, [
+          el('label', {}, ['Situação da demanda']),
+          status,
+          el('div', { class:'multiSelectHint' }, ['Use “Mapeada” quando ainda não houver responsável definido.'])
+        ]),
+      ]),
       el('div', { class:'row' }, [
-        el('div', { class:'field', style:'flex:1' }, [el('label', {}, ['Responsável']), responsavel]),
-        el('div', { class:'field', style:'flex:1' }, [el('label', {}, ['Status']), status]),
-        el('div', { class:'field', style:'min-width:280px' }, [el('label', {}, ['% diário por responsável']), respAllocEditor, respAllocList]),
+        el('div', { class:'field demandAllocSummaryField' }, [
+          el('label', {}, ['Dedicação diária por responsável']),
+          el('div', { class:'respAllocHint' }, ['Informe quanto do dia de cada responsável fica reservado para esta demanda. Ex.: 40 significa 40% do dia.']),
+          respAllocList
+        ]),
       ]),
       el('div', { class:'row' }, [
         el('div', { class:'field' }, [el('label', {}, ['Início']), ini]),
@@ -6305,6 +6728,181 @@ main{padding:14px;overflow-x:hidden}
     return node;
   };
 
+  const NOTIFICATION_ACK_KEY = 'orizon_notifications_ack_v1';
+
+  const notificationUserKey = () => String(userId || userName || 'sem-usuario');
+
+  const loadNotificationAckMap = () => {
+    try {
+      const obj = JSON.parse(localStorage.getItem(NOTIFICATION_ACK_KEY) || '{}');
+      return (obj && typeof obj === 'object' && !Array.isArray(obj)) ? obj : {};
+    } catch { return {}; }
+  };
+
+  const saveNotificationAckMap = (ackMap) => {
+    try { localStorage.setItem(NOTIFICATION_ACK_KEY, JSON.stringify(ackMap || {})); } catch {}
+  };
+
+  const notificationAckSet = () => {
+    const map = loadNotificationAckMap();
+    return new Set(Array.isArray(map[notificationUserKey()]) ? map[notificationUserKey()].map(String) : []);
+  };
+
+  const saveNotificationAckSet = (set) => {
+    const map = loadNotificationAckMap();
+    map[notificationUserKey()] = [...(set || new Set())].slice(-500);
+    saveNotificationAckMap(map);
+  };
+
+  const personMatchKey = (value) => String(value || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ');
+
+  const demandCreatorId = (demand={}) => String(
+    demand.createdById || demand.created_by_id || demand.user_id || demand.userId || ''
+  ).trim() || ownerFromLegacyResourceId(demand.id || '');
+
+  const demandCreatorName = (demand={}) => String(
+    demand.createdBy || demand.created_by || demand.user || demand.usuario || ''
+  ).trim();
+
+  const demandAssignedResourceIds = (demand={}) => {
+    const ids = new Set();
+    for (const a of demandAllocations(demand)) {
+      const rid = String(a?.resourceId || a?.responsavel_id || a?.resource_id || '').trim();
+      if (rid) ids.add(rid);
+    }
+    const direct = String(demand.responsavel_id || demand.resourceId || demand.resource_id || '').trim();
+    if (direct) ids.add(direct);
+    return [...ids];
+  };
+
+  const activeUserResourceIds = () => {
+    if (!hasUser()) return [];
+    const ids = new Set();
+    const currentUserId = String(userId || '').trim();
+    const currentNameKey = personMatchKey(userName);
+    for (const r of (state.resources || [])) {
+      const rid = String(r?.id || '').trim();
+      if (!rid) continue;
+      const ownerId = String(r?.owner_user_id || r?.ownerUserId || '').trim();
+      const resourceNameKey = personMatchKey(r?.nome || r?.name || '');
+      if ((currentUserId && ownerId === currentUserId) || (currentNameKey && resourceNameKey === currentNameKey)) ids.add(rid);
+    }
+    return [...ids];
+  };
+
+  const buildAssignedActivityNotifications = () => {
+    if (!hasUser()) return [];
+    const ownResourceIds = new Set(activeUserResourceIds().map(String));
+    if (!ownResourceIds.size) return [];
+    const acknowledged = notificationAckSet();
+    const currentUserId = String(userId || '').trim();
+    const currentNameKey = personMatchKey(userName);
+    return (state.demands || [])
+      .filter(d => d && String(d.id || '').trim())
+      .filter(d => effectiveStatus(d) !== 'Concluída')
+      .map(d => {
+        const assignedIds = demandAssignedResourceIds(d).filter(rid => ownResourceIds.has(String(rid)));
+        if (!assignedIds.length) return null;
+        const creatorId = demandCreatorId(d);
+        const creatorName = demandCreatorName(d);
+        const creatorNameKey = personMatchKey(creatorName);
+        const createdByCurrentUser = (currentUserId && creatorId === currentUserId) || (currentNameKey && creatorNameKey && creatorNameKey === currentNameKey);
+        if (createdByCurrentUser) return null;
+        const key = `assigned-demand::${d.id}`;
+        if (acknowledged.has(key)) return null;
+        return {
+          key,
+          demand: d,
+          assignedIds,
+          title: String(d.titulo || 'Atividade sem título'),
+          creator: creatorName || creatorId || 'outro usuário',
+          createdAt: d.createdAt || d.updatedAt || '',
+        };
+      })
+      .filter(Boolean)
+      .sort((a,b) => demandCreatedMs(b.demand) - demandCreatedMs(a.demand));
+  };
+
+  const acknowledgeNotifications = (keys=[]) => {
+    const ack = notificationAckSet();
+    for (const key of keys) if (key) ack.add(String(key));
+    saveNotificationAckSet(ack);
+    updateNotificationsBell();
+  };
+
+  const openNotificationDemand = (notification) => {
+    if (!notification) return;
+    acknowledgeNotifications([notification.key]);
+    activeTab = 'demands';
+    uiFilters.demandStatus = '';
+    uiFilters.demandDateStart = '';
+    uiFilters.demandDateEnd = '';
+    uiFilters.demandResourceId = notification.assignedIds?.[0] || '';
+    setDemandTitleFilter('demands', notification.title || '');
+    uiPagination.demandsPage = 1;
+    const wrap = qs('#notifyWrap');
+    const bell = qs('#notifyBell');
+    if (wrap) wrap.classList.remove('open');
+    if (bell) bell.setAttribute('aria-expanded', 'false');
+    render();
+  };
+
+  const updateNotificationsBell = () => {
+    const wrap = qs('#notifyWrap');
+    const bell = qs('#notifyBell');
+    const badge = qs('#notifyBadge');
+    const panel = qs('#notifyPanel');
+    if (!wrap || !bell || !badge || !panel) return;
+    const notifications = buildAssignedActivityNotifications();
+    const count = notifications.length;
+    bell.classList.toggle('active', count > 0);
+    bell.classList.toggle('open', wrap.classList.contains('open'));
+    badge.textContent = count > 99 ? '99+' : String(count);
+    bell.title = count ? `${count} atividade(s) nova(s) atribuída(s) a você` : 'Nenhuma nova atividade atribuída';
+    panel.innerHTML = '';
+    panel.appendChild(el('div', { class:'notifyHead' }, [
+      el('div', {}, [
+        el('strong', {}, ['Notificações']),
+        el('span', {}, [count ? `${count} atividade(s) atribuída(s) por outro usuário` : 'Sem novas atividades atribuídas'])
+      ]),
+      count ? el('button', { class:'notifyClear', type:'button', onclick:(e) => { e.stopPropagation(); acknowledgeNotifications(notifications.map(n => n.key)); toast('Notificações marcadas como lidas.'); } }, ['Marcar lidas']) : null
+    ].filter(Boolean)));
+    if (!count) {
+      panel.appendChild(el('div', { class:'notifyEmpty' }, [hasUser() ? 'Quando alguém atribuir uma demanda ao seu recurso, ela aparecerá aqui.' : 'Defina seu usuário para ver notificações.']));
+      return;
+    }
+    for (const n of notifications.slice(0, 12)) {
+      panel.appendChild(el('button', { class:'notifyItem', type:'button', onclick:() => openNotificationDemand(n) }, [
+        el('div', { class:'top' }, [el('span', { class:'dot' }, []), n.title]),
+        el('div', { class:'sub' }, [`Cadastrada por ${n.creator}${n.createdAt ? ' em ' + formatDateBR(normalizeDateLikeToISO(n.createdAt) || n.createdAt) : ''}. Clique para abrir em Demandas.`])
+      ]));
+    }
+    if (notifications.length > 12) panel.appendChild(el('div', { class:'notifyEmpty' }, [`+${notifications.length - 12} notificação(ões) adicional(is).`]));
+  };
+
+  const wireNotificationsBell = () => {
+    const wrap = qs('#notifyWrap');
+    const bell = qs('#notifyBell');
+    if (!wrap || !bell || bell.__bound) return;
+    bell.__bound = true;
+    bell.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = !wrap.classList.contains('open');
+      wrap.classList.toggle('open', open);
+      bell.setAttribute('aria-expanded', open ? 'true' : 'false');
+      updateNotificationsBell();
+    });
+    document.addEventListener('click', (e) => {
+      if (!wrap.contains(e.target)) {
+        wrap.classList.remove('open');
+        bell.setAttribute('aria-expanded', 'false');
+        updateNotificationsBell();
+      }
+    });
+  };
+
   const card = (title, rightNode, bodyNode) => {
     return el('div', { class:'card' }, [
       el('div', { class:'hd' }, [
@@ -6811,7 +7409,7 @@ function buildConsolidatedYearSeries(year) {
             const tr = el('tr', { id: `winres-${r.id}` });
             tr.appendChild(el('td', { class:'stickyCol' }, [
               el('div', { style:'font-weight:950' }, [r.nome]),
-              el('div', { class:'tiny' }, [`${r.tipo} - ${HOURS_PER_DAY}h/dia`])
+              el('div', { class:'tiny' }, [`${r.tipo} - ${getResourceHoursPerDay(r)}h/dia`])
             ]));
             for (const d of days) {
               const dateStr = formatDate(d);
@@ -7521,7 +8119,7 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
         const tr = el('tr');
         tr.appendChild(el('td', {}, [el('div', { style:'font-weight:950' }, [r.nome]) ]));
         tr.appendChild(el('td', {}, [r.tipo]));
-        tr.appendChild(el('td', {}, [String(HOURS_PER_DAY)]));
+        tr.appendChild(el('td', {}, [String(getResourceHoursPerDay(r))]));
         tr.appendChild(el('td', {}, [r.ativo === false ? 'Não' : 'Sim']));
         const vig = (r.tipo === 'Terceiro') ? `${r.vigencia_inicio?formatDateBR(r.vigencia_inicio):'-'} - ${r.vigencia_fim?formatDateBR(r.vigencia_fim):'-'}` : '-';
         tr.appendChild(el('td', { class:'mono tiny' }, [vig]));
@@ -7631,12 +8229,9 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
       };
 
       const respAllocList = el('div', { class:'respAllocList' });
-      const respAllocPick = el('select', { 'data-demand-create-field':'percentualResponsavel' });
-      const respAllocPctEditor = el('input', { type:'number', min:'0', max:'100', step:'5', 'data-demand-create-field':'percentualValor' });
-      const respAllocEditor = el('div', { class:'row', style:'gap:8px;align-items:end;margin-top:8px;display:none' }, [
-        el('div', { class:'field', style:'min-width:220px;flex:1' }, [el('label', {}, ['Recurso para editar']), respAllocPick]),
-        el('div', { class:'field compact' }, [el('label', {}, ['% diário']), respAllocPctEditor]),
-      ]);
+      const respAllocPick = el('select', { title:'Selecione o responsável para ajustar a dedicação diária', 'data-demand-create-field':'percentualResponsavel' });
+      const respAllocPctEditor = el('input', { type:'number', min:'0', max:'100', step:'5', placeholder:'em %', title:'Dedicação diária em %', 'data-demand-create-field':'percentualValor' });
+      const respAllocEditor = el('div', { class:'respAllocEditor is-empty' }, [respAllocPick, respAllocPctEditor]);
       respAllocPick.addEventListener('change', () => {
         const rid = String(respAllocPick.value || '');
         respAllocPctEditor.value = String(respPctById.get(rid) ?? 100);
@@ -7653,15 +8248,18 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
         respChips.innerHTML = '';
         respAllocList.innerHTML = '';
         const ids = [...selectedRespIds];
-        respAllocEditor.style.display = ids.length >= 2 ? '' : 'none';
-        respAllocList.style.display = ids.length >= 2 ? 'none' : '';
+        respAllocEditor.classList.toggle('is-empty', !ids.length);
+        respAllocList.style.display = 'none';
         respAllocPick.innerHTML = '';
         for (const rid of ids) respAllocPick.appendChild(el('option', { value: rid }, [getRespName(rid)]));
-        if (ids.length >= 2) {
+        if (ids.length) {
           const current = ids.includes(respAllocPick.value) ? respAllocPick.value : ids[0];
           respAllocPick.value = current;
           respAllocPctEditor.value = String(respPctById.get(current) ?? 100);
           respAllocPctEditor.setAttribute('data-demand-create-rid', current);
+        } else {
+          respAllocPctEditor.value = '';
+          respAllocPctEditor.removeAttribute('data-demand-create-rid');
         }
         for (const rid of selectedRespIds) {
           const chip = el('span', { class:'multiSelectChip', 'data-rid': rid }, [
@@ -7679,11 +8277,11 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
             ev.stopPropagation();
           });
           respChips.appendChild(chip);
-          const pct = el('input', { type:'number', min:'0', max:'100', step:'5', value:String(respPctById.get(rid) ?? 100), disabled: ids.length >= 2 ? '' : null, 'data-demand-create-field':'percentualLinha', 'data-demand-create-rid': rid });
+          const pct = el('input', { type:'number', min:'0', max:'100', step:'5', value:String(respPctById.get(rid) ?? 100), title:'Percentual do dia reservado para este responsável', 'data-demand-create-field':'percentualLinha', 'data-demand-create-rid': rid });
           pct.addEventListener('input', () => { respPctById.set(rid, Number(pct.value || 0)); persistDemandCreateDraft(); });
           respAllocList.appendChild(el('div', { class:'respAllocRow' }, [
             el('div', { class:'respAllocName', title:getRespName(rid) }, [getRespName(rid)]),
-            el('div', { class:'respAllocPct' }, [el('label', {}, ['% diário']), pct]),
+            el('div', { class:'respAllocPct' }, [el('label', {}, ['% do dia reservado']), pct]),
           ]));
         }
         restoreRespBoxScroll(keepScrollLeft, false);
@@ -7708,8 +8306,7 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
         const q = (respSearch.value||'').trim().toLowerCase();
         const available = (state.resources||[])
           .filter(r => !selectedRespIds.has(r.id))
-          .filter(r => !q || String(r.nome||'').toLowerCase().includes(q) || String(r.tipo||'').toLowerCase().includes(q))
-          .slice(0, 12);
+          .filter(r => !q || String(r.nome||'').toLowerCase().includes(q) || String(r.tipo||'').toLowerCase().includes(q));
         respMenu.innerHTML = '';
         if (!available.length) {
           respMenu.appendChild(el('div', { class:'multiSelectEmpty' }, [q ? 'Nenhum responsável encontrado.' : 'Todos os responsáveis já foram selecionados.']));
@@ -7911,13 +8508,17 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
       const body = el('div', { class:'split' }, [
         el('div', {}, [
           el('div', { class:'row' }, [
-            el('div', { class:'field' }, [el('label', {}, ['Título']), titulo]),
+            el('div', { class:'field', style:'flex:2 1 360px' }, [el('label', {}, ['Título']), titulo]),
+            el('div', { class:'field', style:'flex:1 1 180px' }, [el('label', {}, ['Prioridade']), prioridade]),
+          ]),
+          el('div', { class:'row' }, [
             el('div', { class:'field' }, [el('label', {}, ['Prédio']), predio]),
             el('div', { class:'field' }, [el('label', {}, ['Focal']), focal]),
+          ]),
+          el('div', { class:'row demandAllocationRow' }, [
             el('div', { class:'field demandRespField' }, [el('label', {}, ['Responsável(is)']), responsavel]),
-            el('div', { class:'field', style:'min-width:290px' }, [el('label', {}, ['% diário por responsável']), respAllocEditor, respAllocList]),
-            el('div', { class:'field' }, [el('label', {}, ['Prioridade']), prioridade]),
-            el('div', { class:'field' }, [el('label', {}, ['Status']), status]),
+            el('div', { class:'field demandPercField' }, [el('label', {}, ['Dedicação diária']), respAllocEditor, respAllocList]),
+            el('div', { class:'field demandStatusField' }, [el('label', {}, ['Status']), status]),
           ]),
           el('div', { class:'row' }, [
             el('div', { class:'field' }, [el('label', {}, ['Início']), ini]),
@@ -8955,7 +9556,7 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano', s
         const tr = el('tr');
         tr.appendChild(el('td', { class:'stickyCol' }, [
           el('div', { style:'font-weight:950' }, [rr.r.nome]),
-          el('div', { class:'tiny' }, [`${rr.r.tipo} - ${HOURS_PER_DAY}h/dia`])
+          el('div', { class:'tiny' }, [`${rr.r.tipo} - ${getResourceHoursPerDay(rr.r)}h/dia`])
         ]));
 
         for (const m of rr.ms) {
@@ -9097,7 +9698,7 @@ Dias 0h: ${m.daysZero} - Dias excedidos: ${m.daysOver}`;
           tr.id = `winres-${r.id}`;
           tr.appendChild(el('td', { class:'stickyCol' }, [
             el('div', { style:'font-weight:950' }, [r.nome]),
-            el('div', { class:'tiny' }, [`${r.tipo} - ${HOURS_PER_DAY}h/dia`])
+            el('div', { class:'tiny' }, [`${r.tipo} - ${getResourceHoursPerDay(r)}h/dia`])
           ]));
 
           for (const d of days) {
@@ -9260,31 +9861,99 @@ Dias 0h: ${m.daysZero} - Dias excedidos: ${m.daysOver}`;
 };
 
   const viewInternalActivities = () => {
+    const currentUserResource = () => {
+      const uid = String(userId || '').trim();
+      const nameKey = normalizedPersonName(userName || '');
+      return (state.resources || []).find(r => uid && resourceOwnerId(r) === uid)
+        || (state.resources || []).find(r => nameKey && normalizedPersonName(r?.nome || r?.name) === nameKey)
+        || null;
+    };
+    const editingActivity = editingInternalActivityId
+      ? (state.internalActivities || []).find(a => String(a.id) === String(editingInternalActivityId) && canManageInternalActivity(a))
+      : null;
+    if (editingInternalActivityId && !editingActivity) editingInternalActivityId = '';
+    const isEditing = !!editingActivity;
+    const setSelectValue = (selectEl, value) => {
+      const v = String(value || '');
+      if (!v) return;
+      if (![...selectEl.options].some(opt => String(opt.value) === v)) selectEl.appendChild(el('option', { value:v }, [v]));
+      selectEl.value = v;
+    };
+
     const type = el('select', {}, [
       el('option', { value:'Reunião administrativa' }, ['Reunião administrativa']),
       el('option', { value:'Treinamento' }, ['Treinamento']),
       el('option', { value:'Leitura/Estudo' }, ['Leitura/Estudo']),
       el('option', { value:'Fórum/Comunidade' }, ['Fórum/Comunidade']),
       el('option', { value:'Curso/Escola técnica' }, ['Curso/Escola técnica']),
+	  el('option', { value:'RO' }, ['RO']),
+	  el('option', { value:'Arquivo' }, ['Arquivo']),
+      el('option', { value:'Reunião' }, ['Reunião']),
+      el('option', { value:'Acompanhamento Execução' }, ['Acompanhamento Execução']),
+      el('option', { value:'Suporte Execução' }, ['Suporte Execução']),
+      el('option', { value:'Administrativa' }, ['Administrativa']),
+      el('option', { value:'Apresentação' }, ['Apresentação']),
+      el('option', { value:'Indicadores' }, ['Indicadores']),
+      el('option', { value:'Treinamento' }, ['Treinamento']),
+      el('option', { value:'Auto Inspeção' }, ['Auto Inspeção']),
+      el('option', { value:'Inspeção' }, ['Inspeção']),
+      el('option', { value:'CTO' }, ['CTO']),
+      el('option', { value:'Levantamento' }, ['Levantamento']),
+      el('option', { value:'Investigação' }, ['Investigação']),
+      el('option', { value:'Suporte de Revisão' }, ['Suporte de Revisão']),
+      el('option', { value:'Plenária' }, ['Plenária']),
+      el('option', { value:'Repasse de Informações' }, ['Repasse de Informações']),
+      el('option', { value:'PMV' }, ['PMV']),
+      el('option', { value:'cBPF - Sólidos Não Estéreis' }, ['cBPF - Sólidos Não Estéreis']),
+      el('option', { value:'Atualizações' }, ['Atualizações']),
+      el('option', { value:'Chegada em atraso' }, ['Chegada em atraso']),
+      el('option', { value:'CM' }, ['CM']),
+      el('option', { value:'Avaliação' }, ['Avaliação']),
+      el('option', { value:'Projetos' }, ['Projetos']),
+      el('option', { value:'Procedimento' }, ['Procedimento']),
+      el('option', { value:'Matriz de Treinamento' }, ['Matriz de Treinamento']),
+      el('option', { value:'Manutenção TI' }, ['Manutenção TI']),
+      el('option', { value:'Scanner' }, ['Scanner']),
+      el('option', { value:'Matriz de Parâmetros' }, ['Matriz de Parâmetros']),
+      el('option', { value:'N/A' }, ['N/A']),
+      el('option', { value:'Ponte/Feriado' }, ['Ponte/Feriado']),
+      el('option', { value:'Férias' }, ['Férias']),
+      el('option', { value:'Saída antecipada' }, ['Saída antecipada']),
+      el('option', { value:'Intervalo' }, ['Intervalo']),
+      el('option', { value:'Exame Periódico' }, ['Exame Periódico']),
+      el('option', { value:'Feedback' }, ['Feedback']),
+      el('option', { value:'Meta' }, ['Meta']),
+      el('option', { value:'Suporte Técnico' }, ['Suporte Técnico']),
+      el('option', { value:'Organização/Montagem de Book' }, ['Organização/Montagem de Book']),
+      el('option', { value:'Banco de Horas' }, ['Banco de Horas']),
+      el('option', { value:'Ausência de Atividades' }, ['Ausência de Atividades']),
+      el('option', { value:'Afastamento Médico' }, ['Afastamento Médico']),
+      el('option', { value:'Levantamento de Informações em Campo' }, ['Levantamento de Informações em Campo']),
+      el('option', { value:'Planejamento' }, ['Planejamento']),
+      el('option', { value:'Reunião sobre Melhorias' }, ['Reunião sobre Melhorias']),
+      el('option', { value:'RM' }, ['RM']),
+      el('option', { value:'CAP - Ciclo de Alta Performance' }, ['CAP - Ciclo de Alta Performance']),
     ]);
-    const title = el('input', { placeholder:'Título da atividade' });
-    const resourceSel = el('select');
-    for (const r of (state.resources||[])) resourceSel.appendChild(el('option', { value:r.id }, [r.nome]));
-    const ini = el('input', { type:'date', value: todayISO() });
-    const fim = el('input', { type:'date', value: todayISO() });
-    const horas = el('input', { type:'text', inputmode:'decimal', value:'01:00', placeholder:'Ex: 01:30 ou 1.5' });
+    const title = el('input', { placeholder:'Título da atividade', value: editingActivity?.titulo || '' });
+    const ini = el('input', { type:'date', value: editingActivity?.data_inicio || todayISO() });
+    const fim = el('input', { type:'date', value: editingActivity?.data_fim || todayISO() });
+    const horas = el('input', { type:'text', inputmode:'decimal', value: isEditing ? decimalHoursToHHMM(editingActivity?.horas_dia || 0) : '01:00', placeholder:'Ex: 01:30 ou 1.5' });
     const contabiliza = el('select', {}, [el('option', { value:'true' }, ['Contabiliza capacidade']), el('option', { value:'false' }, ['Apenas informativa'])]);
-    const obs = el('textarea', { placeholder:'Observações...', maxlength:String(INPUT_LIMITS.demandNotes) });
-    const add = () => {
-      if (!resourceSel.value) return toast('Cadastre/seleciona um recurso.');
+    const obs = el('textarea', { placeholder:'Observações...', maxlength:String(INPUT_LIMITS.demandNotes) }, [editingActivity?.observacoes || '']);
+    setSelectValue(type, editingActivity?.tipo);
+    contabiliza.value = editingActivity?.contabiliza_capacidade === false ? 'false' : 'true';
+    const save = () => {
+      const activeResource = currentUserResource() || (ensureUserAsResource() ? currentUserResource() : null);
+      if (!activeResource?.id) return toast('Não foi possível vincular sua atividade ao seu usuário/recurso. Confira o usuário logado.');
       if (!title.value.trim()) return toast('Informe o título da atividade interna.');
       if (!ini.value || !fim.value || fim.value < ini.value) return toast('Período inválido.');
       const hh = parseHoursInput(horas.value);
       if (!Number.isFinite(hh) || hh < 0) return toast('Horas/dia inválidas.');
       if (hh > 24) return toast('Horas/dia não pode ser maior que 24h.');
-      dispatch('ADD_INTERNAL_ACTIVITY', {
-        id: generateId('ia'),
-        resourceId: resourceSel.value,
+      const base = isEditing ? { ...editingActivity } : { id: generateId('ia') };
+      const payload = {
+        ...base,
+        resourceId: isEditing ? (editingActivity.resourceId || activeResource.id) : activeResource.id,
         tipo: type.value,
         titulo: title.value.trim(),
         data_inicio: ini.value,
@@ -9292,12 +9961,13 @@ Dias 0h: ${m.daysZero} - Dias excedidos: ${m.daysOver}`;
         horas_dia: hh,
         contabiliza_capacidade: contabiliza.value === 'true',
         observacoes: obs.value || '',
-        owner_user_id: userId || '',
-        owner_user_name: userName || 'Sessão local',
-        created_by_id: userId || '',
-        created_by: userName || 'Sessão local',
-      });
-      title.value=''; horas.value='01:00'; obs.value='';
+        owner_user_id: editingActivity?.owner_user_id || editingActivity?.ownerUserId || userId || '',
+        owner_user_name: editingActivity?.owner_user_name || editingActivity?.ownerUserName || userName || 'Sessão local',
+        created_by_id: editingActivity?.created_by_id || editingActivity?.createdById || userId || '',
+        created_by: editingActivity?.created_by || editingActivity?.createdBy || userName || 'Sessão local',
+      };
+      dispatch(isEditing ? 'UPDATE_INTERNAL_ACTIVITY' : 'ADD_INTERNAL_ACTIVITY', payload);
+      editingInternalActivityId = '';
       uiPagination.internalActivitiesPage = 1;
       render();
     };
@@ -9323,32 +9993,38 @@ Dias 0h: ${m.daysZero} - Dias excedidos: ${m.daysOver}`;
       onLast: () => { uiPagination.internalActivitiesPage = totalPages; render(); },
     }) : null;
     const table = el('table');
-    table.appendChild(el('thead', {}, [el('tr', {}, ['Tipo','Título','Recurso','Período','Horas/dia','Capacidade','Ação'].map(h=>el('th',{},[h])))]));
+    table.appendChild(el('thead', {}, [el('tr', {}, ['Tipo','Título','Período','Horas/dia','Capacidade','Ação'].map(h=>el('th',{},[h])))]));
     const tb = el('tbody');
     for (const a of rows) {
-      const r = (state.resources||[]).find(x=>String(x.id)===String(a.resourceId));
       const tr = el('tr');
       tr.appendChild(el('td',{},[String(a.tipo||'')]));
       tr.appendChild(el('td',{},[String(a.titulo||'')]));
-      tr.appendChild(el('td',{},[r?.nome || String(a.resourceId||'')]));
       tr.appendChild(el('td',{},[`${formatDateBR(a.data_inicio)} - ${formatDateBR(a.data_fim)}`]));
       tr.appendChild(el('td',{},[`${Number(a.horas_dia||0).toFixed(1)}h`]));
       tr.appendChild(el('td',{},[a.contabiliza_capacidade===false?'Não':'Sim']));
-      tr.appendChild(el('td',{},[button('Excluir','danger',()=>{
-        if (!canManageInternalActivity(a)) return toast('Você só pode excluir atividades internas lançadas por você.');
-        dispatch('DELETE_INTERNAL_ACTIVITY', a.id);
-        render();
-      })]));
+      tr.appendChild(el('td',{},[el('div',{class:'actionBtns'},[
+        button('Editar','',()=>{
+          if (!canManageInternalActivity(a)) return toast('Você só pode editar atividades internas lançadas por você.');
+          editingInternalActivityId = a.id;
+          render();
+        }),
+        button('Excluir','danger',()=>{
+          if (!canManageInternalActivity(a)) return toast('Você só pode excluir atividades internas lançadas por você.');
+          if (String(editingInternalActivityId) === String(a.id)) editingInternalActivityId = '';
+          dispatch('DELETE_INTERNAL_ACTIVITY', a.id);
+          render();
+        })
+      ])]));
       tb.appendChild(tr);
     }
-    if (!rows.length) tb.appendChild(el('tr',{},[el('td',{colspan:'7',style:'padding:16px;text-align:center;color:var(--muted)'},['Nenhuma atividade interna sua cadastrada.'])]));
+    if (!rows.length) tb.appendChild(el('tr',{},[el('td',{colspan:'6',style:'padding:16px;text-align:center;color:var(--muted)'},['Nenhuma atividade interna sua cadastrada.'])]));
     table.appendChild(tb);
     return el('div',{class:'grid'},[
-      card('Cadastrar atividade interna', null, el('div',{class:'grid'},[
+      card(isEditing ? 'Editar atividade interna' : 'Cadastrar atividade interna', null, el('div',{class:'grid'},[
+        el('div', { class:'tiny muted' }, ['As atividades internas são vinculadas automaticamente ao usuário atual; o campo Recurso fica oculto nesta tela.']),
         el('div',{class:'row'},[
           el('div',{class:'field'},[el('label',{},['Tipo']), type]),
           el('div',{class:'field',style:'flex:1;min-width:240px'},[el('label',{},['Título']), title]),
-          el('div',{class:'field'},[el('label',{},['Recurso']), resourceSel]),
         ]),
         el('div',{class:'row'},[
           el('div',{class:'field'},[el('label',{},['Início']), ini]),
@@ -9357,7 +10033,10 @@ Dias 0h: ${m.daysZero} - Dias excedidos: ${m.daysOver}`;
           el('div',{class:'field'},[el('label',{},['Controle']), contabiliza]),
         ]),
         el('div',{class:'field'},[el('label',{},['Observações']), obs]),
-        el('div',{class:'row end'},[button('Adicionar atividade','primary',add)]),
+        el('div',{class:'row end'},[
+          isEditing ? button('Cancelar edição','',()=>{ editingInternalActivityId = ''; render(); }) : null,
+          button(isEditing ? 'Salvar alterações' : 'Adicionar atividade','primary',save)
+        ].filter(Boolean)),
       ])),
       card('Atividades internas', null, el('div',{class:'grid'},[
         el('div', { class:'tiny muted' }, ['Privacidade: esta lista mostra apenas as atividades internas lançadas pelo usuário atual; a capacidade continua considerando atividades contabilizáveis de todos.']),
@@ -10320,6 +10999,7 @@ return el('div', { class:'grid' }, [
   const render = () => {
     renderTabs();
     updateEventFolderHeaderStatus();
+    updateNotificationsBell();
     const root = qs('#app');
     root.innerHTML = '';
 
@@ -10343,7 +11023,9 @@ return el('div', { class:'grid' }, [
   };
 
   // init
+  wireNotificationsBell();
   setUser(userName);
+  updateNotificationsBell();
 
   // modal close handlers
   const dlg = qs('#dayModal');
@@ -10670,16 +11352,18 @@ return el('div', { class:'grid' }, [
     const resMap = resourceById();
     const rows = (state.demands||[]).map(d => {
       const pct = Number(d.dailyPercent ?? d.percentual_diario ?? d.percent ?? 0);
+      const rid = d.responsavel_id || d.resourceId || '';
+      const res = resMap[rid];
       return {
         id: d.id || '',
         titulo: d.titulo || d.nome || '',
-        responsavel: resMap[d.responsavel_id]?.nome || d.resourceId || d.responsavel || d.responsavel_id || '',
+        responsavel: res?.nome || d.responsavel || rid || '',
         data_inicio: d.start || d.data_inicio || '',
         data_fim: d.end || d.data_fim || '',
         status_base: d.status || '',
         status_atual: effectiveStatus ? effectiveStatus(d) : (d.status||''),
         percentual_diario: isFinite(pct) ? pct : '',
-        horas_dia: isFinite(pct) ? Number((pct / 100 * HOURS_PER_DAY).toFixed(2)) : '',
+        horas_dia: isFinite(pct) ? Number((pct / 100 * getResourceHoursPerDay(res)).toFixed(2)) : '',
         prioridade: d.prioridade || '',
         predio: d.predio || '',
         focal: d.focal || '',
@@ -10804,7 +11488,7 @@ return el('div', { class:'grid' }, [
         baseline_inicio: d.baseline_inicio || d.data_inicio || '',
         baseline_fim: d.baseline_fim || d.data_fim || '',
         percentual_diario: isFinite(pct) ? pct : '',
-        horas_dia: isFinite(pct) ? Number((pct / 100 * HOURS_PER_DAY).toFixed(2)) : '',
+        horas_dia: isFinite(pct) ? Number((pct / 100 * getResourceHoursPerDay(res)).toFixed(2)) : '',
         prioridade: d.prioridade || '',
         predio: d.predio || '',
         focal: d.focal || '',
@@ -11960,12 +12644,12 @@ return el('div', { class:'grid' }, [
             return { dateStr, capacity: 0, allocated: 0, free: 0, eligible: false, overtime: ot };
           }
 
-          // Capacidade base (janelas): dia útil = 9h; dia não útil = 0h; HE soma sobre a data/recurso.
-          let base = blockedNoHe ? 0 : HOURS_PER_DAY;
+          // Capacidade base (janelas): dia útil usa as horas do recurso; dia não útil = 0h; HE soma sobre a data/recurso.
+          let base = blockedNoHe ? 0 : getResourceHoursPerDay(res);
 
           const capacity = Math.max(0, Number(base || 0)) + otHours;
 
-          // Alocado continua calculado sobre 9h (regra do app)
+          // Alocado usa a regra central de horas do recurso (Interno 9h, Terceiro 8h).
           const info = CapacityEngine.freeHoursInfo(rid, dObj);
           return { dateStr, capacity: Number(info.capacity||0), allocated: Number(info.allocated||0), free: Number(info.free||0), eligible: info.eligible !== false, overtime: ot };
         });
@@ -12210,14 +12894,21 @@ return el('div', { class:'grid' }, [
       if (createMode) createMode.disabled = !folderReady || !!selected;
       if (nameInput) nameInput.disabled = !folderReady || !creating;
       if (existingSelect) existingSelect.disabled = !folderReady || creating || !(scannedEventUsers || []).length;
+      const matchingExisting = (creating && nm) ? preferredExistingUserForName(nm) : null;
       const existingLoginReady = !!(selected && !creating);
       const newUserReady = !!(!selected && creating && nm);
       if (saveBtn) saveBtn.disabled = !(folderReady && (existingLoginReady || newUserReady));
       if (idInput) {
         if (existingLoginReady) idInput.value = selected.userId;
         else if (newUserReady) {
-          if (!pendingNewUserIdentity || pendingNewUserIdentity.displayName !== nm) pendingNewUserIdentity = previewUserIdentity(nm);
-          idInput.value = pendingNewUserIdentity.userId;
+          if (matchingExisting?.userId) {
+            pendingNewUserIdentity = { displayName: matchingExisting.displayName || nm, userId: matchingExisting.userId };
+            idInput.value = matchingExisting.userId;
+            if (existingHint) existingHint.textContent = `Nome já encontrado em /events; ao salvar, o usuário existente será reutilizado (${matchingExisting.userId}).`;
+          } else {
+            if (!pendingNewUserIdentity || pendingNewUserIdentity.displayName !== nm) pendingNewUserIdentity = previewUserIdentity(nm);
+            idInput.value = pendingNewUserIdentity.userId;
+          }
         }
         else idInput.value = '';
       }
