@@ -877,6 +877,39 @@ main{padding:14px;overflow-x:hidden}
   gap:10px;
   align-items:end;
 }
+#demandEditModalBody .demandPercField .respAllocEditor.allocSummaryMode{
+  display:block;
+}
+#demandEditModalBody .allocHeaderPremium{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;
+}
+#demandEditModalBody .allocIconBtn{
+  width:38px;height:38px;border-radius:14px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:17px;
+}
+#demandEditModalBody .allocSummaryGrid{
+  display:flex;flex-direction:column;gap:10px;margin-top:0!important;
+}
+#demandEditModalBody .allocResourcePicker{display:grid;grid-template-columns:minmax(180px,360px) 1fr;gap:10px;align-items:end}
+#demandEditModalBody .allocResourcePicker label{font-size:11px;font-weight:950;color:var(--muted);margin:0 0 6px}
+@media (max-width:760px){#demandEditModalBody .allocResourcePicker{grid-template-columns:1fr}}
+#demandEditModalBody .allocSummaryDetails{
+  border:1px solid var(--border);border-radius:16px;background:linear-gradient(180deg,#fff,var(--surface));box-shadow:0 10px 28px rgba(15,23,42,.04);overflow:hidden;
+}
+#demandEditModalBody .allocSummaryDetails summary{
+  list-style:none;cursor:pointer;padding:11px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;
+}
+#demandEditModalBody .allocSummaryDetails summary::-webkit-details-marker{display:none}
+#demandEditModalBody .allocSummaryDetails[open] summary{border-bottom:1px solid var(--border);background:var(--primary-wash)}
+#demandEditModalBody .allocSummaryNameWrap{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
+#demandEditModalBody .allocSummaryChevron{font-size:12px;color:var(--muted);transition:transform .16s ease}
+#demandEditModalBody .allocSummaryDetails[open] .allocSummaryChevron{transform:rotate(90deg)}
+#demandEditModalBody .allocSummaryName{font-weight:950;color:var(--text)}
+#demandEditModalBody .allocSummaryRange{font-size:11px;color:var(--muted);font-weight:800}
+#demandEditModalBody .allocSummaryBadge{border:1px solid var(--primary-light);background:var(--primary-soft);color:var(--primary);border-radius:999px;padding:4px 8px;font-size:10px;font-weight:950;white-space:nowrap}
+#demandEditModalBody .allocSegmentList{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px 12px}
+#demandEditModalBody .allocSegmentChip{border:1px solid var(--border);background:#fff;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:850;color:var(--text)}
+#demandEditModalBody .allocDailyModalGrid{display:grid;grid-template-columns:1.2fr repeat(3, minmax(120px,.7fr));gap:10px;align-items:end}
+@media (max-width:760px){#demandEditModalBody .allocDailyModalGrid{grid-template-columns:1fr}}
 #demandsFormCard .respAllocEditorField,
 #demandEditModalBody .respAllocEditorField{
   display:flex;
@@ -1833,6 +1866,39 @@ main{padding:14px;overflow-x:hidden}
     if (!date) return null;
     const daily = normalizeAllocationDailyHours(allocation.daily_hours || allocation.dailyHours || allocation.horas_por_dia || {});
     return Object.prototype.hasOwnProperty.call(daily, date) ? daily[date] : null;
+  };
+
+
+  const fillAllocationDailyHoursRange = (dailyHours={}, startStr='', endStr='', hours=0) => {
+    const daily = normalizeAllocationDailyHours(dailyHours || {});
+    let cursor = normalizeDateLikeToISO(startStr || '') || '';
+    const end = normalizeDateLikeToISO(endStr || '') || '';
+    const value = roundDemandHours(hours);
+    let guard = 0;
+    while (cursor && end && cursor <= end && guard < 8000) {
+      daily[cursor] = value;
+      cursor = addDaysISO(cursor, 1);
+      guard++;
+    }
+    return daily;
+  };
+
+  const applyIndividualAllocationHourChange = ({ rid, nextHours, changeFrom, respHoursById, respStartById, respEndById, respDailyById, fallbackStart='', fallbackEnd='' }) => {
+    if (!rid) return;
+    const previousHours = Number(respHoursById.get(rid) ?? 0);
+    const originalStart = normalizeDateLikeToISO(respStartById.get(rid) || fallbackStart || '') || '';
+    const end = normalizeDateLikeToISO(respEndById.get(rid) || fallbackEnd || '') || '';
+    const from = normalizeDateLikeToISO(changeFrom || '') || originalStart;
+    let daily = normalizeAllocationDailyHours(respDailyById.get(rid) || {});
+    if (originalStart && from && from > originalStart && Number.isFinite(previousHours)) {
+      const historyEnd = addDaysISO(from, -1);
+      daily = fillAllocationDailyHoursRange(daily, originalStart, historyEnd, previousHours);
+    }
+    if (end && from && from <= end) {
+      daily = fillAllocationDailyHoursRange(daily, from, end, nextHours);
+    }
+    respDailyById.set(rid, daily);
+    respHoursById.set(rid, roundDemandHours(nextHours));
   };
 
   const normalizeDemandAllocations = (demand, resources=[]) => {
@@ -2864,9 +2930,8 @@ main{padding:14px;overflow-x:hidden}
       const respName = (d.responsavel_id||'') ? (resMap[d.responsavel_id]?.nome || '-') : '-';
       const primaryAlloc = demandAllocations(d).find(a => String(a.resourceId || '') === String(d.responsavel_id || '')) || demandAllocations(d)[0] || {};
       tr.appendChild(el('td', {}, [
-        el('div', {}, [respName]),
-        timelineLabels.length ? el('div', { class:'tiny muted', title:'Historico de atuacao por periodo' }, [timelineLabels.join(' | ')]) : null
-      ].filter(Boolean)));
+        el('div', {}, [respName])
+      ]));
       tr.appendChild(el('td', { class:'mono tiny' }, [`${formatDateBR(d.data_inicio)} - ${formatDateBR(d.data_fim)}`]));
       tr.appendChild(el('td', { class:'mono' }, [timelineLabels.length ? timelineLabels.map(x => x.split(': ').pop()).join(' | ') : decimalHoursToHHMM(primaryAlloc.horas_planejadas_dia ?? d.horas_planejadas_dia ?? d.horas_dia ?? 0)]));
       tr.appendChild(el('td', {}, [d.prioridade || '-']));
@@ -4723,6 +4788,64 @@ main{padding:14px;overflow-x:hidden}
     return '';
   };
 
+
+
+  const focalUserOptions = () => {
+    const names = [];
+    const add = (value) => {
+      const name = String(value || '').trim();
+      if (name) names.push(name);
+    };
+    add(userName);
+    for (const u of (scannedEventUsers || [])) add(u?.displayName || u?.name || u?.userName);
+    for (const r of (state.resources || [])) add(r?.nome || r?.name);
+    for (const ev of (state.events || [])) {
+      add(ev?.user || ev?.usuario || ev?.user_name);
+      const payload = ev?.payload || {};
+      add(payload.user || payload.usuario || payload.user_name || payload.created_by || payload.createdBy);
+    }
+    return [...new Set(names)].sort((a,b) => a.localeCompare(b, 'pt-BR'));
+  };
+
+  const createFocalPicker = ({ value='', draftField=false } = {}) => {
+    const attrs = { value, placeholder:'Digite para buscar o focal...', maxlength:String(INPUT_LIMITS.focal) };
+    if (draftField) attrs['data-demand-create-field'] = 'focal';
+    const input = el('input', attrs);
+    input.className = 'multiSelectInput';
+    const menu = el('div', { class:'multiSelectMenu' });
+    const box = el('div', { class:'multiSelectBox' }, [input]);
+    const control = el('div', { class:'multiSelect', title:'Digite para buscar e clique para selecionar um usuário cadastrado' }, [box, menu]);
+    const closeMenu = () => control.classList.remove('open');
+    const renderOptions = () => {
+      const q = normalizeSearchText(input.value || '');
+      const options = focalUserOptions().filter(name => !q || normalizeSearchText(name).includes(q)).slice(0, 50);
+      menu.innerHTML = '';
+      if (!options.length) {
+        menu.appendChild(el('div', { class:'multiSelectEmpty' }, [q ? 'Nenhum usuário encontrado.' : 'Nenhum usuário cadastrado encontrado.']));
+        return;
+      }
+      for (const name of options) {
+        menu.appendChild(el('button', { type:'button', class:'multiSelectOption', 'data-focal-name':name }, [name]));
+      }
+    };
+    const openMenu = () => { control.classList.add('open'); renderOptions(); };
+    menu.addEventListener('mousedown', (ev) => {
+      const opt = ev.target.closest('.multiSelectOption');
+      if (!opt) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      input.value = opt.getAttribute('data-focal-name') || '';
+      input.dispatchEvent(new Event('input', { bubbles:true }));
+      input.dispatchEvent(new Event('change', { bubbles:true }));
+      closeMenu();
+    });
+    input.addEventListener('input', openMenu);
+    input.addEventListener('focus', openMenu);
+    input.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closeMenu(); });
+    document.addEventListener('mousedown', (ev) => { if (!control.contains(ev.target)) closeMenu(); });
+    return { input, control };
+  };
+
   const validateDemandFields = ({ titulo='', predio='', focal='', data_inicio='', data_fim='', observacoes='', status='Mapeada' } = {}) => {
     const textRules = [
       ['Título', titulo, INPUT_LIMITS.demandTitle, true],
@@ -4783,6 +4906,50 @@ main{padding:14px;overflow-x:hidden}
     if (!d) return '';
     d.setDate(d.getDate() + Number(days || 0));
     return formatDate(d);
+  };
+
+  const fillDailyHoursRange = (dailyHours={}, startStr='', endStr='', hours=0) => {
+    const daily = normalizeAllocationDailyHours(dailyHours || {});
+    let cursor = normalizeDateLikeToISO(startStr || '') || '';
+    const end = normalizeDateLikeToISO(endStr || '') || '';
+    const value = roundDemandHours(hours);
+    let guard = 0;
+    while (cursor && end && cursor <= end && guard < 8000) {
+      daily[cursor] = value;
+      cursor = addDaysISO(cursor, 1);
+      guard++;
+    }
+    return daily;
+  };
+
+  const applyAllocationHoursFromDate = ({ rid='', changeFrom='', nextHours=0, respHoursById, respStartById, respEndById, respDailyById, fallbackStart='', fallbackEnd='', originalStartOverride='' }) => {
+    const resourceId = String(rid || '').trim();
+    if (!resourceId) return;
+    const currentStart = normalizeDateLikeToISO(respStartById.get(resourceId) || fallbackStart || '') || '';
+    const originalStart = normalizeDateLikeToISO(originalStartOverride || '') || currentStart;
+    const end = normalizeDateLikeToISO(respEndById.get(resourceId) || fallbackEnd || '') || originalStart;
+    const from = normalizeDateLikeToISO(changeFrom || '') || originalStart;
+    const previousHours = Number(respHoursById.get(resourceId) ?? 0);
+    const newHours = roundDemandHours(nextHours);
+    let daily = normalizeAllocationDailyHours(respDailyById.get(resourceId) || {});
+
+    if (originalStart && from && from > originalStart && Number.isFinite(previousHours)) {
+      daily = fillDailyHoursRange(daily, originalStart, addDaysISO(from, -1), previousHours);
+      respHoursById.set(resourceId, newHours);
+      // A data informada no editor de horas representa o início da nova carga,
+      // não o início da alocação. Mantemos a alocação ativa desde o início
+      // planejado e materializamos as horas anteriores em daily_hours para o
+      // heatmap continuar contando o histórico dia a dia.
+      respStartById.set(resourceId, originalStart);
+      if (end && from <= end) daily = fillDailyHoursRange(daily, from, end, newHours);
+      respDailyById.set(resourceId, daily);
+      return;
+    }
+
+    respStartById.set(resourceId, originalStart || from);
+    if (end && from && from <= end) daily = fillDailyHoursRange(daily, from, end, newHours);
+    respHoursById.set(resourceId, newHours);
+    respDailyById.set(resourceId, daily);
   };
   const buildBlockingDisplayRows = (items=[]) => {
     const list = (Array.isArray(items) ? items : []).slice().sort((a,b) => {
@@ -6659,6 +6826,157 @@ main{padding:14px;overflow-x:hidden}
     openDialog(dlg);
   };
 
+  const auditDateTimeBR = (timestamp) => {
+    const n = Number(timestamp || 0);
+    if (!n) return '-';
+    try { return new Date(n).toLocaleString('pt-BR'); } catch { return '-'; }
+  };
+
+  const allocationAuditSnapshot = (demand={}) => {
+    const rows = [];
+    for (const a of demandAllocations(demand)) {
+      const rid = String(a.resourceId || '').trim();
+      const start = normalizeDateLikeToISO(a.data_inicio || a.dataInicio || a.start_date || '') || normalizeDateLikeToISO(demand.data_inicio || '') || '';
+      const end = normalizeDateLikeToISO(a.data_fim || a.dataFim || a.end_date || '') || normalizeDateLikeToISO(demand.data_fim || '') || start;
+      const name = resourceById()[rid]?.nome || rid || '-';
+      let cursor = start;
+      let current = null;
+      let guard = 0;
+      while (cursor && end && cursor <= end && guard < 8000) {
+        const horas = demandAllocationHoursForDate(a, rid, isoToLocalMidnight(cursor), state.resources || []);
+        if (!current || current.horas !== horas) {
+          if (current) rows.push(current);
+          current = { resourceId:rid, recurso:name, data_inicio:cursor, data_fim:cursor, horas };
+        } else {
+          current.data_fim = cursor;
+        }
+        cursor = addDaysISO(cursor, 1);
+        guard++;
+      }
+      if (current) rows.push(current);
+      if (!start) rows.push({ resourceId:rid, recurso:name, data_inicio:'', data_fim:'', horas:roundDemandHours(firstHoursLike(a.horas_planejadas_dia, a.horas_dia, a.horas, demand.horas_planejadas_dia, demand.horas_dia) ?? 0) });
+    }
+    return rows.sort((a,b) => `${a.resourceId}|${a.data_inicio}|${a.data_fim}`.localeCompare(`${b.resourceId}|${b.data_inicio}|${b.data_fim}`));
+  };
+
+  const allocationAuditLine = (a={}) => `${a.recurso || a.resourceId || '-'}: ${formatDateBR(a.data_inicio)} até ${formatDateBR(a.data_fim)} • ${decimalHoursToHHMM(a.horas || 0)}/dia`;
+
+  const allocationAuditKey = (a={}) => [
+    String(a.resourceId || '').trim(),
+    normalizeDateLikeToISO(a.data_inicio || '') || '',
+    normalizeDateLikeToISO(a.data_fim || '') || ''
+  ].join('|');
+
+  const buildAllocationAuditDetails = (beforeAlloc=[], afterAlloc=[]) => {
+    const beforeMap = new Map((Array.isArray(beforeAlloc) ? beforeAlloc : []).map(a => [allocationAuditKey(a), a]));
+    const afterMap = new Map((Array.isArray(afterAlloc) ? afterAlloc : []).map(a => [allocationAuditKey(a), a]));
+    const keys = [...new Set([...beforeMap.keys(), ...afterMap.keys()])].sort();
+    const details = [];
+    for (const key of keys) {
+      const before = beforeMap.get(key);
+      const after = afterMap.get(key);
+      const base = after || before || {};
+      const name = base.recurso || resourceById()[base.resourceId]?.nome || base.resourceId || '-';
+      const period = `${formatDateBR(base.data_inicio)} até ${formatDateBR(base.data_fim)}`;
+      if (before && after) {
+        const beforeHours = roundDemandHours(before.horas || 0);
+        const afterHours = roundDemandHours(after.horas || 0);
+        if (beforeHours !== afterHours) details.push(`${name} (${period}) - Horas/dia: ${decimalHoursToHHMM(beforeHours)} → ${decimalHoursToHHMM(afterHours)}`);
+      } else if (before && !after) {
+        details.push(`${name} (${period}) - Período/carga removido: ${decimalHoursToHHMM(before.horas || 0)}/dia`);
+      } else if (!before && after) {
+        details.push(`${name} (${period}) - Período/carga adicionado: ${decimalHoursToHHMM(after.horas || 0)}/dia`);
+      }
+    }
+    return details;
+  };
+
+  const demandAuditValue = (field, value) => {
+    if (field === 'data_inicio' || field === 'data_fim') return value ? formatDateBR(value) : '-';
+    if (field === 'horas_planejadas_dia') return decimalHoursToHHMM(Number(value || 0));
+    if (field === 'percentual_diario') return `${Number(value || 0)}%`;
+    if (field === 'responsavel_id') return value ? (resourceById()[value]?.nome || value) : '-';
+    return String(value ?? '').trim() || '-';
+  };
+
+  const buildDemandFieldAuditDetails = (before={}, after={}) => {
+    const labels = {
+      titulo:'Título',
+      predio:'Prédio',
+      focal:'Focal',
+      responsavel_id:'Responsável principal',
+      data_inicio:'Início da demanda',
+      data_fim:'Fim da demanda',
+      prioridade:'Prioridade',
+      status:'Status',
+      observacoes:'Descrição'
+    };
+    const details = [];
+    for (const [field, label] of Object.entries(labels)) {
+      const b = before?.[field] ?? '';
+      const a = after?.[field] ?? '';
+      if (String(b ?? '') !== String(a ?? '')) {
+        details.push(`${label}: ${demandAuditValue(field, b)} → ${demandAuditValue(field, a)}`);
+      }
+    }
+    return details;
+  };
+
+  const demandAuditEventId = (event={}) => {
+    const p = event?.payload || {};
+    return String(p.demand_id || p.demandId || p.id || p.demanda_id || p.reprogramming?.demanda_id || p.reprogramming?.demandId || '').trim();
+  };
+
+  const buildDemandAuditTrail = (demand={}) => {
+    const did = String(demand.id || '').trim();
+    const rows = [];
+    const add = (row) => rows.push({ timestamp:Number(row.timestamp || 0), ...row });
+    if (demand.createdAt || demand.created_at) add({ title:'Demanda criada', timestamp:demand.createdAt || demand.created_at, actor:demand.createdBy || demand.created_by || '', details:[`Status inicial: ${normalizeStatus(demand.status)}`] });
+    for (const ev of (state.events || [])) {
+      if (demandAuditEventId(ev) !== did) continue;
+      const p = ev.payload || {};
+      const type = String(ev.type || 'EVENTO');
+      const beforeAlloc = p.before?.allocations || [];
+      const afterAlloc = p.after?.allocations || [];
+      const allocationChanged = JSON.stringify(beforeAlloc) !== JSON.stringify(afterAlloc);
+      if (type === 'UPDATE_DEMAND' && !p.before && !p.after) continue;
+      const details = buildDemandFieldAuditDetails(p.before || {}, p.after || {});
+      if (allocationChanged) {
+        details.push('Alocação/atuação alterada:');
+        details.push(...buildAllocationAuditDetails(beforeAlloc, afterAlloc));
+        details.push(`Resumo anterior: ${beforeAlloc.length ? beforeAlloc.map(allocationAuditLine).join(' | ') : '-'}`);
+        details.push(`Resumo novo: ${afterAlloc.length ? afterAlloc.map(allocationAuditLine).join(' | ') : '-'}`);
+      }
+      if (!details.length) details.push('A demanda foi salva sem alteração material nos campos auditados.');
+      add({ title: type === 'EDIT_DEMAND' ? 'Edição de demanda' : type, timestamp:ev.timestamp, actor:ev.user || '', reason:p.justification || ev.justification || '', details });
+    }
+    for (const t of transferHistoryEntries(demand)) {
+      add({ title:'Transferência de atuação', timestamp:t.timestamp || 0, actor:t.user || '', reason:t.justification || '', details:[`${resourceById()[t.fromResourceId]?.nome || t.fromResourceId || '-'} → ${resourceById()[t.toResourceId]?.nome || t.toResourceId || '-'}`, `Data da ação: ${formatDateBR(t.transferDate)}`, `Horas/dia: ${decimalHoursToHHMM(t.horas_planejadas_dia || t.horas_dia || 0)}`] });
+    }
+    return rows.sort((a,b) => Number(b.timestamp || 0) - Number(a.timestamp || 0));
+  };
+
+  const renderDemandAuditTrail = (demand={}) => {
+    const rows = buildDemandAuditTrail(demand);
+    const box = el('div', { class:'grid', style:'gap:12px' }, [
+      el('div', { class:'hint' }, [el('b', {}, ['Trilha de Auditoria']), el('div', { class:'tiny muted', style:'margin-top:4px' }, ['Mostra data/hora da ação, autor, justificativa e alterações de atuação registradas para esta demanda.'])])
+    ]);
+    if (!rows.length) {
+      box.appendChild(el('div', { style:'padding:16px;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:16px;background:var(--surface)' }, ['Nenhuma ação registrada para esta demanda.']));
+      return box;
+    }
+    for (const row of rows) {
+      box.appendChild(el('div', { style:'border:1px solid var(--border);border-radius:16px;padding:12px;background:#fff' }, [
+        el('div', { style:'display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap' }, [
+          el('div', {}, [el('div', { style:'font-weight:950' }, [row.title || 'Ação']), el('div', { class:'tiny muted' }, [`Data/hora da ação: ${auditDateTimeBR(row.timestamp)}${row.actor ? ' • ' + row.actor : ''}`])]),
+        ]),
+        row.reason ? el('div', { class:'tiny', style:'margin-top:8px;white-space:pre-wrap' }, [`Justificativa: ${row.reason}`]) : el('div', { style:'display:none' }, []),
+        row.details?.length ? el('ul', { class:'tiny muted', style:'margin:8px 0 0 18px;padding:0' }, row.details.filter(Boolean).map(d => el('li', {}, [d]))) : el('div', { style:'display:none' }, []),
+      ]));
+    }
+    return box;
+  };
+
   const openDemandEditModal = (demand, { viewOnly=false, targetStatus='' } = {}) => {
     const isFinalView = viewOnly || ['Concluída','Cancelada'].includes(effectiveStatus(demand));
     const dlg = qs('#demandEditModal');
@@ -6674,7 +6992,7 @@ main{padding:14px;overflow-x:hidden}
 
     const titulo = el('input', { value: demand.titulo || '', placeholder:'Ex: PQ Sistema X', maxlength:String(INPUT_LIMITS.demandTitle) });
     const predio = el('input', { value: demand.predio || '', placeholder:'Ex: Prédio A', maxlength:String(INPUT_LIMITS.building) });
-    const focal = el('input', { value: demand.focal || '', placeholder:'Ex: Fulano (Focal)', maxlength:String(INPUT_LIMITS.focal) });
+    const { input: focal, control: focalControl } = createFocalPicker({ value: demand.focal || '' });
 
     const selectedRespIds = new Set();
     const respHoursById = new Map();
@@ -6699,6 +7017,9 @@ main{padding:14px;overflow-x:hidden}
       respEndById.set(demand.responsavel_id, demandEndForAlloc);
       respDailyById.set(demand.responsavel_id, {});
     }
+    const originalRespHoursById = new Map(respHoursById);
+    const originalRespStartById = new Map(respStartById);
+    const originalRespEndById = new Map(respEndById);
     const respSearch = el('input', { class:'multiSelectInput', placeholder:'Digite o nome do responsável...' });
     const respChips = el('div', { style:'display:contents' });
     const respMenu = el('div', { class:'multiSelectMenu' });
@@ -6709,6 +7030,7 @@ main{padding:14px;overflow-x:hidden}
     ]);
     const selectedResponsaveis = () => [...selectedRespIds].filter(Boolean);
     const getRespName = (id) => (state.resources||[]).find(r => r.id === id)?.nome || id;
+    let refreshAllocationPreview = () => {};
     const closeRespMenu = () => responsavel.classList.remove('open');
     const renderRespOptions = () => {
       const q = (respSearch.value||'').trim().toLowerCase();
@@ -6725,37 +7047,143 @@ main{padding:14px;overflow-x:hidden}
       }
     };
     const respAllocList = el('div', { class:'respAllocList' });
-    const respAllocPick = el('select');
-    const respAllocStartEditor = el('input', { type:'date', min:`${MIN_APP_YEAR}-01-01`, max:`${MAX_APP_YEAR}-12-31`, title:'Data de atuação inicial do responsável' });
-    const respAllocEndEditor = el('input', { type:'date', min:`${MIN_APP_YEAR}-01-01`, max:`${MAX_APP_YEAR}-12-31`, title:'Data de atuação final do responsável' });
-    const respAllocHoursEditor = el('input', { type:'text', inputmode:'decimal', placeholder:'Ex: 03:30', title:'Horas alocadas por dia para o responsável' });
-    const respAllocEditor = el('div', { class:'respAllocEditor is-empty' }, [
-      el('div', { class:'respAllocEditorField' }, [el('label', {}, ['Responsável']), respAllocPick]),
-      el('div', { class:'respAllocEditorField' }, [el('label', {}, ['Data de atuação inicial']), respAllocStartEditor]),
-      el('div', { class:'respAllocEditorField' }, [el('label', {}, ['Data de atuação final']), respAllocEndEditor]),
-      el('div', { class:'respAllocEditorField' }, [el('label', {}, ['Horas alocadas']), respAllocHoursEditor]),
-    ]);
+    const respAllocPick = el('select', { title:'Selecione o responsável para ver a alocação configurada' });
+    const respAllocStartEditor = el('input', { type:'date', style:'display:none' });
+    const respAllocEndEditor = el('input', { type:'date', style:'display:none' });
+    const respAllocHoursEditor = el('input', { type:'text', style:'display:none' });
+    const respAllocSummary = el('div', { class:'respAllocList' });
     const syncRespAllocEditor = () => {
       const rid = String(respAllocPick.value || '');
       respAllocHoursEditor.value = rid ? decimalHoursToHHMM(respHoursById.get(rid) ?? resourceHoursById(rid, state.resources || [])) : '';
       respAllocStartEditor.value = rid ? (respStartById.get(rid) || ini.value || demandStartForAlloc) : '';
       respAllocEndEditor.value = rid ? (respEndById.get(rid) || fim.value || demandEndForAlloc) : '';
     };
-    respAllocPick.addEventListener('change', syncRespAllocEditor);
-    respAllocStartEditor.addEventListener('input', () => { const rid = String(respAllocPick.value || ''); if (!rid) return; respStartById.set(rid, respAllocStartEditor.value); respDailyById.set(rid, {}); renderApontamentos(); });
-    respAllocEndEditor.addEventListener('input', () => { const rid = String(respAllocPick.value || ''); if (!rid) return; respEndById.set(rid, respAllocEndEditor.value); respDailyById.set(rid, {}); renderApontamentos(); });
-    respAllocHoursEditor.addEventListener('input', () => {
-      const rid = String(respAllocPick.value || '');
-      if (!rid) return;
-      respHoursById.set(rid, parseHoursInput(respAllocHoursEditor.value));
-      respDailyById.set(rid, {});
-      renderApontamentos();
-    });
+    const compactDailySegmentsForSummary = (rid, start='', end='') => {
+      const daily = normalizeAllocationDailyHours(respDailyById.get(rid) || {});
+      const entries = Object.entries(daily).filter(([date]) => (!start || date >= start) && (!end || date <= end)).sort(([a],[b]) => a.localeCompare(b));
+      if (!entries.length) return [{ start, end, hours:roundDemandHours(respHoursById.get(rid) ?? resourceHoursById(rid, state.resources || [])), custom:false }];
+      const segments = [];
+      for (const [date, hoursRaw] of entries) {
+        const hours = roundDemandHours(hoursRaw);
+        const last = segments.at(-1);
+        if (last && last.hours === hours && addDaysISO(last.end, 1) === date) {
+          last.end = date;
+        } else {
+          segments.push({ start:date, end:date, hours, custom:true });
+        }
+      }
+      return segments;
+    };
+    const renderRespAllocSummary = () => {
+      respAllocSummary.innerHTML = '';
+      const ids = selectedResponsaveis();
+      respAllocSummary.classList.add('allocSummaryGrid');
+      if (!ids.length) {
+        respAllocSummary.appendChild(el('div', { class:'respAllocEmpty' }, ['Adicione um responsável para configurar atuação e horas alocadas.']));
+        return;
+      }
+      const current = ids.includes(respAllocPick.value) ? respAllocPick.value : ids[0];
+      respAllocPick.value = current;
+      const rid = current;
+      const start = normalizeDateLikeToISO(respStartById.get(rid) || '') || ini.value || demandStartForAlloc;
+      const end = normalizeDateLikeToISO(respEndById.get(rid) || '') || fim.value || demandEndForAlloc;
+      const segments = compactDailySegmentsForSummary(rid, start, end);
+      const visibleSegments = segments.slice(0, 8);
+      const extraCount = Math.max(0, segments.length - visibleSegments.length);
+      respAllocSummary.appendChild(el('div', { class:'allocResourcePicker' }, [
+        el('div', { class:'field' }, [el('label', {}, ['Responsável']), respAllocPick]),
+        el('div', { class:'tiny muted' }, ['Selecione um responsável para revisar as horas cadastradas sem ocupar espaço com todos na tela.'])
+      ]));
+      respAllocSummary.appendChild(el('details', { class:'allocSummaryDetails', open:'' }, [
+        el('summary', { title:'Clique para recolher/abrir as horas cadastradas' }, [
+          el('div', { class:'allocSummaryNameWrap' }, [
+            el('span', { class:'allocSummaryChevron' }, ['▶']),
+            el('span', { class:'allocSummaryName' }, [getRespName(rid)]),
+            el('span', { class:'allocSummaryRange' }, [`${formatDateBR(start)} até ${formatDateBR(end)}`])
+          ]),
+          el('span', { class:'allocSummaryBadge' }, [segments.length > 1 ? `${segments.length} trechos` : 'padrão'])
+        ]),
+        el('div', { class:'allocSegmentList' }, [
+          ...visibleSegments.map(seg => el('span', { class:'allocSegmentChip', title:`${formatDateBR(seg.start)} até ${formatDateBR(seg.end)}` }, [`${formatDateBR(seg.start)}-${formatDateBR(seg.end)} • ${decimalHoursToHHMM(seg.hours)}`])),
+          extraCount ? el('span', { class:'allocSegmentChip' }, [`+${extraCount} trecho(s)`]) : el('span', { style:'display:none' }, [])
+        ])
+      ]));
+    };
+    respAllocPick.addEventListener('change', renderRespAllocSummary);
+    const ensureDailyHoursCoversAllocation = (rid, start='', end='') => {
+      const resourceId = String(rid || '').trim();
+      if (!resourceId || !start || !end) return;
+      let daily = normalizeAllocationDailyHours(respDailyById.get(resourceId) || {});
+      const fallbackHours = roundDemandHours(respHoursById.get(resourceId) ?? resourceHoursById(resourceId, state.resources || []));
+      let cursor = start;
+      let guard = 0;
+      while (cursor && cursor <= end && guard < 8000) {
+        if (!Object.prototype.hasOwnProperty.call(daily, cursor)) daily[cursor] = fallbackHours;
+        cursor = addDaysISO(cursor, 1);
+        guard++;
+      }
+      respDailyById.set(resourceId, daily);
+    };
+    const openDailyAllocationModal = () => {
+      if (!selectedRespIds.size) { toast('Adicione um responsável antes de alterar a alocação diária.'); return; }
+      if (!window.confirm('Deseja alterar a alocação diária?')) return;
+      const modal = document.createElement('dialog');
+      modal.className = 'modal';
+      const pick = el('select');
+      for (const rid of selectedResponsaveis()) pick.appendChild(el('option', { value:rid }, [getRespName(rid)]));
+      if (selectedResponsaveis().includes(respAllocPick.value)) pick.value = respAllocPick.value;
+      const startInput = el('input', { type:'date', min:`${MIN_APP_YEAR}-01-01`, max:`${MAX_APP_YEAR}-12-31` });
+      const endInput = el('input', { type:'date', min:`${MIN_APP_YEAR}-01-01`, max:`${MAX_APP_YEAR}-12-31` });
+      const hoursInput = el('input', { type:'text', inputmode:'decimal', placeholder:'Ex: 03:30 ou 3' });
+      const fill = () => {
+        const rid = String(pick.value || '');
+        startInput.value = normalizeDateLikeToISO(respStartById.get(rid) || '') || ini.value || demandStartForAlloc;
+        endInput.value = normalizeDateLikeToISO(respEndById.get(rid) || '') || fim.value || demandEndForAlloc;
+        hoursInput.value = decimalHoursToHHMM(respHoursById.get(rid) ?? resourceHoursById(rid, state.resources || []));
+      };
+      pick.addEventListener('change', fill);
+      fill();
+      const saveDaily = () => {
+        const rid = String(pick.value || '');
+        const changeFrom = normalizeDateLikeToISO(startInput.value || '') || '';
+        const changeTo = normalizeDateLikeToISO(endInput.value || '') || '';
+        const nextHours = parseHoursInput(hoursInput.value);
+        if (!rid) { toast('Selecione um responsável.'); return; }
+        if (!changeFrom || !changeTo || changeTo < changeFrom) { toast('Informe um período válido para a alteração diária.'); return; }
+        if (!Number.isFinite(nextHours) || nextHours < 0) { toast('Informe horas válidas para a alteração diária.'); return; }
+        if (nextHours > resourceHoursById(rid, state.resources || [])) { toast(`Horas não podem passar de ${decimalHoursToHHMM(resourceHoursById(rid, state.resources || []))} por dia.`); return; }
+        const allocStart = normalizeDateLikeToISO(respStartById.get(rid) || '') || ini.value || demandStartForAlloc;
+        const allocEnd = normalizeDateLikeToISO(respEndById.get(rid) || '') || fim.value || demandEndForAlloc;
+        respEndById.set(rid, allocEnd);
+        ensureDailyHoursCoversAllocation(rid, allocStart, allocEnd);
+        let daily = normalizeAllocationDailyHours(respDailyById.get(rid) || {});
+        daily = fillDailyHoursRange(daily, changeFrom, changeTo, nextHours);
+        respDailyById.set(rid, daily);
+        renderRespAllocSummary();
+        renderApontamentos();
+        refreshAllocationPreview();
+        closeDialog(modal);
+        modal.remove();
+        toast('Alteração diária cadastrada. Salve a demanda para persistir.');
+      };
+      modal.appendChild(el('div', { class:'modalCard', style:'max-width:720px' }, [
+        el('div', { class:'modalHd' }, [el('div', {}, [el('h2', {}, ['Alterar alocação diária']), el('div', { class:'sub' }, ['Recadastre o período e as horas. O heatmap passa a usar essa agenda diária.'])]), button('Fechar', '', () => { closeDialog(modal); modal.remove(); })]),
+        el('div', { class:'modalBd' }, [el('div', { class:'grid' }, [
+          el('div', { class:'allocDailyModalGrid' }, [el('div', { class:'field' }, [el('label', {}, ['Responsável']), pick]), el('div', { class:'field' }, [el('label', {}, ['De']), startInput]), el('div', { class:'field' }, [el('label', {}, ['Até']), endInput]), el('div', { class:'field' }, [el('label', {}, ['Horas/dia']), hoursInput])]),
+          el('div', { class:'hint' }, ['Exemplo: 01 a 07 = 03:00, depois 08 a 10 = 02:00, depois 11 a 15 = 06:00. Cada salvamento adiciona/atualiza esse trecho na alocação do responsável.']),
+          el('div', { class:'row', style:'justify-content:flex-end' }, [button('Salvar alteração diária', 'primary', saveDaily)])
+        ])])
+      ]));
+      document.body.appendChild(modal);
+      openDialog(modal);
+    };
+    const respAllocEditor = el('div', { class:'respAllocEditor allocSummaryMode is-empty' }, [respAllocSummary]);
+    const allocationChangeBtn = el('button', { type:'button', class:'btn small ghost allocIconBtn', title:'Alterar alocação diária', 'aria-label':'Alterar alocação diária' }, ['✎']);
+    allocationChangeBtn.addEventListener('click', openDailyAllocationModal);
     const renderRespChips = () => {
       respChips.innerHTML = '';
       respAllocList.innerHTML = '';
       const ids = [...selectedRespIds];
-      ids.forEach(rid => respDailyById.set(rid, {}));
       respAllocEditor.classList.toggle('is-empty', !ids.length);
       respAllocList.style.display = ids.length ? 'none' : 'block';
       if (!ids.length) {
@@ -6775,6 +7203,8 @@ main{padding:14px;overflow-x:hidden}
         respAllocEndEditor.value = '';
       }
       syncRespAllocEditor();
+      renderRespAllocSummary();
+      refreshAllocationPreview();
       for (const rid of selectedRespIds) {
         const chip = el('span', { class:'multiSelectChip', 'data-rid': rid }, [
           el('span', {}, [getRespName(rid)]),
@@ -6790,6 +7220,8 @@ main{padding:14px;overflow-x:hidden}
           respDailyById.delete(rid);
           if (!selectedRespIds.size) status.value = 'Mapeada';
           syncMapeada();
+          renderRespAllocSummary();
+          refreshAllocationPreview();
         });
         respChips.appendChild(chip);
       }
@@ -6805,6 +7237,8 @@ main{padding:14px;overflow-x:hidden}
       respSearch.value = '';
       if (normalizeStatus(status.value) === 'Mapeada') status.value = 'Em andamento';
       syncMapeada();
+      renderRespAllocSummary();
+      refreshAllocationPreview();
       openRespMenu();
     };
     respMenu.addEventListener('mousedown', (ev) => {
@@ -6856,6 +7290,47 @@ main{padding:14px;overflow-x:hidden}
     const justHint = el('div', { class:'tiny muted' }, [
       'Se você preencher, a justificativa será registrada no histórico (events) do app para rastreabilidade.'
     ]);
+    const allocationDiffPreview = el('div', { class:'hint', style:'display:none' });
+    const selectedAllocationPreviewState = () => {
+      const rid = String(respAllocPick.value || '').trim();
+      if (!rid || !selectedRespIds.has(rid) || normalizeStatus(status.value) === 'Mapeada') return null;
+      return {
+        rid,
+        name:getRespName(rid),
+        before:{
+          inicio: normalizeDateLikeToISO(originalRespStartById.get(rid) || '') || demandStartForAlloc,
+          fim: normalizeDateLikeToISO(originalRespEndById.get(rid) || '') || demandEndForAlloc,
+          horas: roundDemandHours(originalRespHoursById.get(rid) ?? resourceHoursById(rid, state.resources || [])),
+        },
+        after:{
+          inicio: normalizeDateLikeToISO(respAllocStartEditor.value || respStartById.get(rid) || '') || ini.value || demandStartForAlloc,
+          fim: normalizeDateLikeToISO(respAllocEndEditor.value || respEndById.get(rid) || '') || fim.value || demandEndForAlloc,
+          horas: roundDemandHours(parseHoursInput(respAllocHoursEditor.value) ?? respHoursById.get(rid) ?? resourceHoursById(rid, state.resources || [])),
+        }
+      };
+    };
+    refreshAllocationPreview = () => {
+      const statePreview = selectedAllocationPreviewState();
+      const lines = [];
+      if (statePreview) {
+        if (statePreview.before.inicio !== statePreview.after.inicio) lines.push(`Início da atuação: ${formatDateBR(statePreview.before.inicio)} → ${formatDateBR(statePreview.after.inicio)}`);
+        if (statePreview.before.fim !== statePreview.after.fim) lines.push(`Data de atuação final: ${formatDateBR(statePreview.before.fim)} → ${formatDateBR(statePreview.after.fim)}`);
+        if (statePreview.before.horas !== statePreview.after.horas) lines.push(`Horas/dia: ${decimalHoursToHHMM(statePreview.before.horas)} → ${decimalHoursToHHMM(statePreview.after.horas)}`);
+      }
+      const changed = lines.length > 0;
+      allocationDiffPreview.innerHTML = '';
+      allocationDiffPreview.style.display = changed ? '' : 'none';
+      if (!changed) return;
+      allocationDiffPreview.appendChild(el('b', {}, [`Alterações detectadas na alocação de ${statePreview.name}`]));
+      allocationDiffPreview.appendChild(el('ul', { class:'tiny', style:'margin:8px 0 0 18px;padding:0' }, [
+        ...lines.map(line => el('li', {}, [line])),
+        el('li', {}, [`Planejado: ${formatDateBR(statePreview.before.inicio)} até ${formatDateBR(statePreview.before.fim)} • ${decimalHoursToHHMM(statePreview.before.horas)}/dia`]),
+        el('li', {}, [`Alterado: ${formatDateBR(statePreview.after.inicio)} até ${formatDateBR(statePreview.after.fim)} • ${decimalHoursToHHMM(statePreview.after.horas)}/dia`]),
+      ]));
+    };
+    ini.addEventListener('input', () => { renderRespAllocSummary(); refreshAllocationPreview(); });
+    fim.addEventListener('input', () => { renderRespAllocSummary(); refreshAllocationPreview(); });
+    status.addEventListener('change', refreshAllocationPreview);
 
     // v0.2.2 ? Apontamentos reais com timeline visual por demanda.
     let apontamentos = normalizeDemandApontamentos(demand);
@@ -6906,7 +7381,12 @@ main{padding:14px;overflow-x:hidden}
 
       const allocationsForMetrics = (normalizeStatus(status.value) === 'Mapeada')
         ? []
-        : selectedResponsaveis().map(rid => makeDemandAllocation(rid, respHoursById.get(rid) ?? resourceHoursById(rid, state.resources || []), state.resources || []));
+        : selectedResponsaveis().map(rid => ({
+          ...makeDemandAllocation(rid, respHoursById.get(rid) ?? resourceHoursById(rid, state.resources || []), state.resources || []),
+          data_inicio: normalizeDateLikeToISO(respStartById.get(rid) || '') || ini.value || demandStartForAlloc,
+          data_fim: normalizeDateLikeToISO(respEndById.get(rid) || '') || fim.value || demandEndForAlloc,
+          daily_hours: normalizeAllocationDailyHours(respDailyById.get(rid) || {}),
+        }));
       const demandForMetrics = {
         ...demand,
         data_inicio: String(ini.value || demand.data_inicio || '').trim(),
@@ -7126,6 +7606,7 @@ main{padding:14px;overflow-x:hidden}
       prioridade: demand.prioridade,
       status: demand.status,
       observacoes: demand.observacoes,
+      allocations: allocationAuditSnapshot(demand),
       apontamentos: normalizeDemandApontamentos(demand)
     };
 
@@ -7224,9 +7705,10 @@ main{padding:14px;overflow-x:hidden}
         prioridade: next.prioridade,
         status: next.status,
         observacoes: next.observacoes,
+        allocations: allocationAuditSnapshot(next),
         apontamentos: normalizeDemandApontamentos(next)
       };
-      state.events = [...state.events, { id: generateId('event'), type:'EDIT_DEMAND', payload:{ demand_id: demand.id, before, after, justification }, timestamp: Date.now(), user: userName, user_id: userId || '' }];
+      state.events = [...state.events, { id: generateId('event'), type:'EDIT_DEMAND', payload:{ demand_id: demand.id, action_at: Date.now(), before, after, justification }, timestamp: Date.now(), user: userName, user_id: userId || '' }];
 
       dispatch('UPDATE_DEMAND', next);
       try { dlg.close(); } catch { dlg.removeAttribute('open'); }
@@ -7241,7 +7723,25 @@ main{padding:14px;overflow-x:hidden}
     ]);
 
     const sectionTitle = (num, text) => el('div', { class:'demandCreateSectionTitle' }, [el('span', { class:'step' }, [String(num)]), text]);
-    body.appendChild(el('div', { class:'demandCreateForm' }, [
+    const editPanel = el('div');
+    const auditPanel = el('div', { style:'display:none' }, [renderDemandAuditTrail(demand)]);
+    let editTabBtn = null;
+    let auditTabBtn = null;
+    const setDemandModalTab = (tab) => {
+      const audit = tab === 'audit';
+      editPanel.style.display = audit ? 'none' : '';
+      auditPanel.style.display = audit ? '' : 'none';
+      if (editTabBtn) editTabBtn.className = audit ? 'btn small' : 'btn primary small';
+      if (auditTabBtn) auditTabBtn.className = audit ? 'btn primary small' : 'btn small';
+    };
+    editTabBtn = button('Edição de demanda', 'primary small', () => setDemandModalTab('edit'));
+    auditTabBtn = button('Trilha de Auditoria', 'small', () => setDemandModalTab('audit'));
+    body.appendChild(el('div', { class:'grid', style:'gap:12px' }, [
+      el('div', { class:'row', style:'gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:10px' }, [editTabBtn, auditTabBtn]),
+      editPanel,
+      auditPanel,
+    ]));
+    editPanel.appendChild(el('div', { class:'demandCreateForm' }, [
       el('div', { class:'demandCreateIntro' }, [
         el('div', {}, [
           el('strong', {}, [isFinalView ? 'Visualização de demanda' : 'Edição de demanda']),
@@ -7255,7 +7755,7 @@ main{padding:14px;overflow-x:hidden}
           el('div', { class:'field demandCreateField span-6' }, [el('label', {}, ['Título']), titulo]),
           el('div', { class:'field demandCreateField span-6' }, [el('label', {}, ['Prioridade']), prioridade]),
           el('div', { class:'field demandCreateField span-6' }, [el('label', {}, ['Prédio']), predio]),
-          el('div', { class:'field demandCreateField span-6' }, [el('label', {}, ['Focal']), focal]),
+          el('div', { class:'field demandCreateField span-6' }, [el('label', {}, ['Focal']), focalControl, el('div', { class:'tiny muted' }, ['Busque usuários cadastrados para evitar nomes digitados aleatoriamente.'])]),
         ])
       ]),
       el('div', { class:'demandCreateSection' }, [
@@ -7270,7 +7770,7 @@ main{padding:14px;overflow-x:hidden}
         sectionTitle(3, 'Responsáveis e dedicação'),
         el('div', { class:'demandCreateGrid' }, [
           el('div', { class:'field demandCreateField demandRespField span-8' }, [el('label', {}, ['Responsável(is)']), responsavel]),
-          el('div', { class:'field demandCreateField demandPercField demandAllocSummaryField span-12' }, [el('label', {}, ['Alocação do responsável']), respAllocEditor, respAllocList]),
+          el('div', { class:'field demandCreateField demandPercField demandAllocSummaryField span-12' }, [el('div', { class:'allocHeaderPremium' }, [el('label', {}, ['Alocação do responsável']), allocationChangeBtn]), respAllocEditor, respAllocList]),
         ])
       ]),
       el('div', { class:'demandCreateSection' }, [
@@ -7285,7 +7785,7 @@ main{padding:14px;overflow-x:hidden}
 
     if (isFinalView) {
       footer.querySelectorAll('button').forEach(btn => btn.setAttribute('data-final-view-action', 'true'));
-      body.querySelectorAll('input, textarea, select, button').forEach(ctrl => {
+      editPanel.querySelectorAll('input, textarea, select, button').forEach(ctrl => {
         if (ctrl.matches('[data-final-view-editable=\"true\"], [data-final-view-action=\"true\"]')) return;
         ctrl.disabled = true;
         ctrl.setAttribute('aria-disabled', 'true');
@@ -9203,9 +9703,22 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano (de
         ...STATUS.map(s => el('option', { value:s, selected: uiFilters.demandStatus === s }, [s]))
       ]);
       status.addEventListener('change', () => { uiFilters.demandStatus = status.value; uiPagination.evaluationPage = 1; render(); });
+      const resource = el('select', {}, [
+        el('option', { value:'' }, ['Todos os recursos']),
+        el('option', { value:'__NONE__' }, ['Sem responsável (Mapeada)']),
+        ...(state.resources || []).map(r => el('option', { value:r.id, selected: uiFilters.demandResourceId === r.id }, [r.nome || r.id]))
+      ]);
+      resource.addEventListener('change', () => { uiFilters.demandResourceId = resource.value; uiPagination.evaluationPage = 1; render(); });
+      const dateStart = el('input', { type:'date', value:uiFilters.demandDateStart || '' });
+      const dateEnd = el('input', { type:'date', value:uiFilters.demandDateEnd || '' });
+      dateStart.addEventListener('change', () => { uiFilters.demandDateStart = dateStart.value; uiPagination.evaluationPage = 1; render(); });
+      dateEnd.addEventListener('change', () => { uiFilters.demandDateEnd = dateEnd.value; uiPagination.evaluationPage = 1; render(); });
       return el('div', { class:'row', style:'gap:10px;flex-wrap:wrap;align-items:end' }, [
         el('div', { class:'field', style:'min-width:220px;flex:1' }, [el('label', {}, ['Título / status']), title]),
         el('div', { class:'field', style:'min-width:180px' }, [el('label', {}, ['Status']), status]),
+        el('div', { class:'field', style:'min-width:220px' }, [el('label', {}, ['Recurso']), resource]),
+        el('div', { class:'field', style:'min-width:150px' }, [el('label', {}, ['De']), dateStart]),
+        el('div', { class:'field', style:'min-width:150px' }, [el('label', {}, ['Até']), dateEnd]),
       ]);
     })();
 
@@ -10031,7 +10544,7 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano (de
     const form = (() => {
       const titulo = el('input', { placeholder:'Ex: PQ Sistema X', maxlength:String(INPUT_LIMITS.demandTitle), 'data-demand-create-field':'titulo' });
       const predio = el('input', { placeholder:'Ex: Prédio A', maxlength:String(INPUT_LIMITS.building), 'data-demand-create-field':'predio' });
-      const focal = el('input', { placeholder:'Ex: Fulano (Focal)', maxlength:String(INPUT_LIMITS.focal), 'data-demand-create-field':'focal' });
+      const { input: focal, control: focalControl } = createFocalPicker({ draftField:true });
 
       // Responsáveis: busca + chips (mais intuitivo que select multiple/Ctrl)
       const selectedRespIds = new Set();
@@ -10083,7 +10596,7 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano (de
       const respAllocHoursEditor = el('input', { type:'text', inputmode:'decimal', placeholder:'Ex: 03:30', title:'Horas alocadas por dia para o responsável', 'data-demand-create-field':'horasValor' });
       const respAllocEditor = el('div', { class:'respAllocEditor is-empty' }, [
       el('div', { class:'respAllocEditorField' }, [el('label', {}, ['Responsável']), respAllocPick]),
-      el('div', { class:'respAllocEditorField' }, [el('label', {}, ['Data de atuação inicial']), respAllocStartEditor]),
+      el('div', { class:'respAllocEditorField' }, [el('label', {}, ['Início da atuação / alteração de carga']), respAllocStartEditor]),
       el('div', { class:'respAllocEditorField' }, [el('label', {}, ['Data de atuação final']), respAllocEndEditor]),
       el('div', { class:'respAllocEditorField' }, [el('label', {}, ['Horas alocadas']), respAllocHoursEditor]),
     ]);
@@ -10095,13 +10608,12 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano (de
         if (rid) respAllocHoursEditor.setAttribute('data-demand-create-rid', rid); else respAllocHoursEditor.removeAttribute('data-demand-create-rid');
       };
       respAllocPick.addEventListener('change', syncRespAllocEditor);
-      respAllocStartEditor.addEventListener('input', () => { const rid = String(respAllocPick.value || ''); if (!rid) return; respStartById.set(rid, respAllocStartEditor.value); respDailyById.set(rid, {}); persistDemandCreateDraft(); });
-      respAllocEndEditor.addEventListener('input', () => { const rid = String(respAllocPick.value || ''); if (!rid) return; respEndById.set(rid, respAllocEndEditor.value); respDailyById.set(rid, {}); persistDemandCreateDraft(); });
+      respAllocStartEditor.addEventListener('input', () => { const rid = String(respAllocPick.value || ''); if (rid) respStartById.set(rid, normalizeDateLikeToISO(respAllocStartEditor.value || '') || respAllocStartEditor.value || ''); persistDemandCreateDraft(); });
+      respAllocEndEditor.addEventListener('input', () => { const rid = String(respAllocPick.value || ''); if (!rid) return; respEndById.set(rid, respAllocEndEditor.value); persistDemandCreateDraft(); });
       respAllocHoursEditor.addEventListener('input', () => {
         const rid = String(respAllocPick.value || '');
         if (!rid) return;
-        respHoursById.set(rid, parseHoursInput(respAllocHoursEditor.value));
-        respDailyById.set(rid, {});
+        applyAllocationHoursFromDate({ rid, changeFrom: respAllocStartEditor.value, nextHours: parseHoursInput(respAllocHoursEditor.value), respHoursById, respStartById, respEndById, respDailyById, fallbackStart: ini.value, fallbackEnd: fim.value, originalStartOverride: ini.value });
         persistDemandCreateDraft();
       });
       const renderRespChips = () => {
@@ -10109,7 +10621,6 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano (de
         respChips.innerHTML = '';
         respAllocList.innerHTML = '';
         const ids = [...selectedRespIds];
-        ids.forEach(rid => respDailyById.set(rid, {}));
         respAllocEditor.classList.toggle('is-empty', !ids.length);
         respAllocList.style.display = ids.length ? 'none' : 'block';
         respAllocPick.innerHTML = '';
@@ -10415,7 +10926,7 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano (de
             el('div', { class:'field demandCreateField span-6' }, [el('label', {}, ['Título']), titulo]),
             el('div', { class:'field demandCreateField span-6' }, [el('label', {}, ['Prioridade']), prioridade]),
             el('div', { class:'field demandCreateField span-6' }, [el('label', {}, ['Prédio']), predio]),
-            el('div', { class:'field demandCreateField span-6' }, [el('label', {}, ['Focal']), focal]),
+            el('div', { class:'field demandCreateField span-6' }, [el('label', {}, ['Focal']), focalControl, el('div', { class:'tiny muted' }, ['Busque usuários cadastrados para evitar nomes digitados aleatoriamente.'])]),
           ])
         ]),
         el('div', { class:'demandCreateSection' }, [
@@ -10522,17 +11033,13 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano (de
         const respNames = respIds.length
           ? respIds.map(id => resMap[id]?.nome || id)
           : ['-'];
-        const timelineLabels = dedupeDemandAllocationLabels(groupItems.flatMap(item => demandAllocationTimelineLabels(item)));
         const primaryDemand = groupItems[0] || d;
         const tr = el('tr');
         if (effectiveStatus(d) === 'Atrasada') tr.classList.add('overdueRow');
-        tr.appendChild(el('td', {}, [el('div', { style:'font-weight:950' }, [d.titulo]), el('div', { class:'tiny' }, [d.observacoes||''])]));
+        tr.appendChild(el('td', {}, [el('div', { style:'font-weight:950' }, [d.titulo])]));
         tr.appendChild(el('td', {}, [d.predio||'-']));
         tr.appendChild(el('td', {}, [d.focal||'-']));
-        tr.appendChild(el('td', {}, [
-          ...respNames.map((name, idx) => el('div', {}, [idx === respNames.length - 1 ? name : `${name},`])),
-          timelineLabels.length ? el('div', { class:'tiny muted', title:'Historico de atuacao por periodo' }, [timelineLabels.join(' | ')]) : null
-        ].filter(Boolean)));
+        tr.appendChild(el('td', {}, respNames.map((name, idx) => el('div', {}, [idx === respNames.length - 1 ? name : `${name},`]))));
         tr.appendChild(el('td', { class:'mono tiny' }, [`${formatDateBR(d.data_inicio)} - ${formatDateBR(d.data_fim)}`]));
         const allocLabels = activeDemandAllocations(d)
           .map(a => `${resMap[String(a.resourceId || '').trim()]?.nome || String(a.resourceId || '').trim() || '-'}: ${decimalHoursToHHMM(a.horas_planejadas_dia || a.horas_dia || 0)}`);
