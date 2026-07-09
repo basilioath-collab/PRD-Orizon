@@ -1719,16 +1719,22 @@ main{padding:14px;overflow-x:hidden}
   const demandAllocationHoursForDate = (allocation={}, resourceId='', dateObj=null, resources=[]) => {
     const rid = String(resourceId || allocation.resourceId || '').trim();
     const pct = Number(allocation.percentual_diario ?? allocation.dailyPercent ?? allocation.percent);
-    const fixedHours = Number(allocation.horas_planejadas_dia ?? allocation.horas_dia ?? 0);
+    const explicitHours = firstHoursLike(
+      allocation.horas_planejadas_dia,
+      allocation.horas_dia,
+      allocation.horas,
+      allocation.hours_per_day
+    );
     const dateStr = dateObj ? formatDate(dateObj) : '';
     const dailyOverride = allocationDailyHoursForDate(allocation, dateStr);
     if (dailyOverride !== null) return dailyOverride;
+    if (explicitHours !== null) return roundDemandHours(explicitHours);
     const res = resourceByIdFromList(rid, resources);
     const baseForDate = getResourceHoursForDate(res, dateObj);
     if (Number.isFinite(pct) && pct >= 0 && baseForDate > 0) {
       return roundDemandHours((pct / 100) * baseForDate);
     }
-    return roundDemandHours(fixedHours);
+    return 0;
   };
   const demandAllocationActiveOnDate = (allocation={}, demand={}, dateStr='') => {
     const date = String(dateStr || '').trim();
@@ -1866,6 +1872,19 @@ main{padding:14px;overflow-x:hidden}
     if (!date) return null;
     const daily = normalizeAllocationDailyHours(allocation.daily_hours || allocation.dailyHours || allocation.horas_por_dia || {});
     return Object.prototype.hasOwnProperty.call(daily, date) ? daily[date] : null;
+  };
+
+  const allocationRepresentativeDate = (allocation={}, demand={}) => {
+    const start = normalizeDateLikeToISO(allocation.data_inicio || allocation.dataInicio || allocation.start_date || '') || normalizeDateLikeToISO(demand.data_inicio || '') || '';
+    const end = normalizeDateLikeToISO(allocation.data_fim || allocation.dataFim || allocation.end_date || '') || normalizeDateLikeToISO(demand.data_fim || '') || '';
+    const today = todayISO();
+    if ((!start || today >= start) && (!end || today <= end)) return today;
+    return start || end || today;
+  };
+
+  const demandAllocationDisplayHours = (allocation={}, demand={}, resources=state.resources || []) => {
+    const dateStr = allocationRepresentativeDate(allocation, demand);
+    return demandAllocationHoursForDate(allocation, allocation.resourceId || demand.responsavel_id || '', isoToLocalMidnight(dateStr), resources);
   };
 
 
@@ -3544,10 +3563,36 @@ main{padding:14px;overflow-x:hidden}
     if (STATUS_COUNTS_IN_ALLOCATION.has(st)) return true;
     if (st !== 'Concluída') return false;
 
-    // Uma demanda concluída libera a janela no próprio dia da conclusão.
-    // Os dias anteriores continuam alocados para preservar o histórico da janela.
+    // Demandas concluídas mantêm o histórico de alocação somente até a véspera
+    // da conclusão. No dia da conclusão a janela já fica livre para nova demanda.
     const completionDate = demandCompletionActionDate(demand);
     return !!completionDate && String(dateStr || '') < completionDate;
+  };
+
+  const demandAppearsInHeatmapOnDate = (demand, dateStr) => {
+    const date = String(dateStr || '').trim();
+    if (!date) return false;
+    if (demandCountsInAllocationOnDate(demand, date)) return true;
+    if (effectiveStatus(demand) !== 'Concluída') return false;
+
+    // Mantém o registro visual da demanda concluída nos cards/drilldowns do
+    // heatmap até a data de conclusão, sem continuar consumindo capacidade.
+    const completionDate = demandCompletionActionDate(demand);
+    return !!completionDate && date === completionDate;
+  };
+
+  const demandAppearsInHeatmapRange = (demand, rangeStart='', rangeEnd='') => {
+    if (!demandHistoricalWindowOverlapsRange(demand, rangeStart, rangeEnd)) return false;
+    const st = effectiveStatus(demand);
+    if (STATUS_COUNTS_IN_ALLOCATION.has(st)) return true;
+    if (st !== 'Concluída') return false;
+
+    const completionDate = demandCompletionActionDate(demand);
+    if (!completionDate) return false;
+    const historicalStart = demandHistoricalStart(demand) || normalizeDateLikeToISO(demand?.data_inicio || '') || completionDate;
+    const historicalEnd = demandHistoricalEnd(demand) || normalizeDateLikeToISO(demand?.data_fim || '') || completionDate;
+    const visibleEnd = historicalEnd && historicalEnd < completionDate ? historicalEnd : completionDate;
+    return overlapsRange(historicalStart, visibleEnd, rangeStart, rangeEnd) || demandHasActualWorkInRange(demand, rangeStart, rangeEnd);
   };
 
   const overdueTooltip = (demand) => {
@@ -4628,7 +4673,7 @@ main{padding:14px;overflow-x:hidden}
         const rid = String(a.resourceId || '').trim();
         const name = resMap[rid]?.nome || rid || '-';
         const period = demandAllocationPeriodLabel(a, demand);
-        const hours = decimalHoursToHHMM(a.horas_planejadas_dia ?? a.horas_dia ?? 0);
+        const hours = decimalHoursToHHMM(demandAllocationDisplayHours(a, demand, resources));
         return `${name}${period ? ` (${period})` : ''}: ${hours}`;
       });
   };
@@ -6528,8 +6573,8 @@ main{padding:14px;overflow-x:hidden}
     return (state.demands||[]).filter(d => {
       const hasResource = demandAllocations(d).some(a => String(a.resourceId || '') === String(resourceId || '') && demandAllocationActiveOnDate(a, d, dateStr));
       if (!hasResource) return false;
-      if (!demandCountsInAllocationOnDate(d, dateStr)) return false;
-      return demandHistoricalWindowContainsDate(d, dateStr);
+      if (!demandHistoricalWindowContainsDate(d, dateStr)) return false;
+      return demandAppearsInHeatmapOnDate(d, dateStr);
     });
   };
 
@@ -6600,7 +6645,7 @@ main{padding:14px;overflow-x:hidden}
         !nonWorkingReason ? el('b', {}, ['Em andamento']) : null,
         !nonWorkingReason ? ' e ' : null,
         !nonWorkingReason ? el('b', {}, ['Atrasada']) : null,
-        !nonWorkingReason ? '. Concluída/Congelada/Mapeada não contabilizam.' : null
+        !nonWorkingReason ? '. Concluída aparece como registro histórico até a data de conclusão, sem consumir capacidade no dia da conclusão.' : null
       ].filter(Boolean))
     ]);
 
@@ -6733,42 +6778,56 @@ main{padding:14px;overflow-x:hidden}
   // ----------------------
   // Editar Demanda (modal com justificativa opcional)
   // ----------------------
-  const requestDemandStatusJustificationWithText = (demand, nextStatus, justification, { silent=false, actionDate='' } = {}) => {
+  const requestDemandStatusJustificationWithText = (demand, nextStatus, justification, { silent=false, actionDate='', relatedDemands=[] } = {}) => {
     if (!demand) return false;
     const normalizedNextStatus = normalizeStatus(nextStatus);
-    const currentStatus = effectiveStatus(demand);
-    if (currentStatus === normalizedNextStatus) {
+    const targets = [demand, ...(Array.isArray(relatedDemands) ? relatedDemands : [])]
+      .filter(Boolean)
+      .filter((item, idx, arr) => String(item.id || '') && arr.findIndex(x => String(x.id || '') === String(item.id || '')) === idx)
+      .map(item => (state.demands || []).find(d => String(d.id) === String(item.id)) || item);
+    const pendingTargets = targets.filter(item => effectiveStatus(item) !== normalizedNextStatus || normalizeStatus(item.status) !== normalizedNextStatus);
+    if (!pendingTargets.length) {
       if (!silent) toast(`Demanda já está ${normalizedNextStatus.toLowerCase()}.`);
       return false;
     }
     const justValidation = validateTextLimit(justification, 'Justificativa', INPUT_LIMITS.justification, { required:true });
     if (justValidation) { if (!silent) toast(justValidation); return false; }
-    const latestDemand = (state.demands || []).find(d => String(d.id) === String(demand.id)) || demand;
-    const next = {
-      ...latestDemand,
-      status: normalizedNextStatus,
-      status_reason: justification,
-      status_reason_type: normalizedNextStatus,
-      status_changed_at: Date.now(),
-      status_action_date: actionDate || todayISO(),
-      status_changed_by: userName || 'Sessão local',
-      status_changed_by_id: userId || '',
-      last_edit_by: userName,
-      last_edit_at: Date.now(),
-      last_edit_justification: justification,
-    };
-    state.events = [...state.events, {
-      id: generateId('event'),
-      type:'CHANGE_DEMAND_STATUS',
-      payload:{ demand_id: latestDemand.id, before:{ status: currentStatus }, after:{ status: normalizedNextStatus, action_date: actionDate || todayISO() }, justification },
-      timestamp: Date.now(),
-      user: userName,
-      user_id: userId || ''
-    }];
-    dispatch('UPDATE_DEMAND', next);
+
+    const statusChangedAt = Date.now();
+    const statusActionDate = actionDate || todayISO();
+    const finalStatusAudit = normalizedNextStatus === 'Concluída'
+      ? { completion_date: statusActionDate, data_conclusao: statusActionDate, completed_at: statusActionDate }
+      : (normalizedNextStatus === 'Cancelada' ? { cancellation_date: statusActionDate, canceled_at: statusActionDate } : {});
+
+    for (const latestDemand of pendingTargets) {
+      const currentStatus = effectiveStatus(latestDemand);
+      const next = {
+        ...latestDemand,
+        ...finalStatusAudit,
+        status: normalizedNextStatus,
+        status_reason: justification,
+        status_reason_type: normalizedNextStatus,
+        status_changed_at: statusChangedAt,
+        status_action_date: statusActionDate,
+        status_changed_by: userName || 'Sessão local',
+        status_changed_by_id: userId || '',
+        last_edit_by: userName,
+        last_edit_at: statusChangedAt,
+        last_edit_justification: justification,
+      };
+      state.events = [...state.events, {
+        id: generateId('event'),
+        type:'CHANGE_DEMAND_STATUS',
+        payload:{ demand_id: latestDemand.id, before:{ status: currentStatus }, after:{ status: normalizedNextStatus, action_date: statusActionDate }, justification },
+        timestamp: statusChangedAt,
+        user: userName,
+        user_id: userId || ''
+      }];
+      dispatch('UPDATE_DEMAND', next);
+    }
     if (!silent) {
       render();
-      toast(`Demanda ${normalizedNextStatus.toLowerCase()}.`);
+      toast(pendingTargets.length > 1 ? `${pendingTargets.length} demandas atualizadas para ${normalizedNextStatus.toLowerCase()}.` : `Demanda ${normalizedNextStatus.toLowerCase()}.`);
     }
     return true;
   };
@@ -6784,7 +6843,7 @@ main{padding:14px;overflow-x:hidden}
     requestDemandStatusJustificationWithText(demand, normalizedNextStatus, justification);
   };
 
-  const openDemandStatusActionModal = (demand, nextStatus) => {
+  const openDemandStatusActionModal = (demand, nextStatus, relatedDemands=[]) => {
     const dlg = qs('#demandStatusModal');
     if (!dlg || !demand) return;
     const normalizedNextStatus = normalizeStatus(nextStatus);
@@ -6804,7 +6863,7 @@ main{padding:14px;overflow-x:hidden}
       const text = String(justification.value || '').trim();
       const justValidation = validateTextLimit(text, 'Justificativa', INPUT_LIMITS.justification, { required:true });
       if (justValidation) return toast(justValidation);
-      const changed = requestDemandStatusJustificationWithText(demand, normalizedNextStatus, text, { actionDate: dateVal });
+      const changed = requestDemandStatusJustificationWithText(demand, normalizedNextStatus, text, { actionDate: dateVal, relatedDemands });
       if (changed) { try { dlg.close(); } catch { dlg.removeAttribute('open'); } }
     };
 
@@ -7005,7 +7064,7 @@ main{padding:14px;overflow-x:hidden}
       const rid = String(a.resourceId || '').trim();
       if (!rid) continue;
       selectedRespIds.add(rid);
-      respHoursById.set(rid, Number(a.horas_planejadas_dia ?? a.horas_dia ?? percentToDemandHours(a.percentual_diario ?? demand.percentual_diario ?? 100, rid, state.resources || [])));
+      respHoursById.set(rid, demandAllocationDisplayHours(a, demand, state.resources || []));
       respStartById.set(rid, normalizeDateLikeToISO(a.data_inicio || a.dataInicio || a.start_date || '') || demandStartForAlloc);
       respEndById.set(rid, normalizeDateLikeToISO(a.data_fim || a.dataFim || a.end_date || '') || demandEndForAlloc);
       respDailyById.set(rid, normalizeAllocationDailyHours(a.daily_hours || a.dailyHours || a.horas_por_dia || {}));
@@ -7579,7 +7638,7 @@ main{padding:14px;overflow-x:hidden}
               const rid = String(a.resourceId || '').trim();
               if (!rid) continue;
               selectedRespIds.add(rid);
-              if (!respHoursById.has(rid)) respHoursById.set(rid, Number(a.horas_planejadas_dia ?? a.horas_dia ?? percentToDemandHours(a.percentual_diario ?? demand.percentual_diario ?? 100, rid, state.resources || [])));
+              if (!respHoursById.has(rid)) respHoursById.set(rid, demandAllocationDisplayHours(a, demand, state.resources || []));
             }
             if (!selectedRespIds.size && demand.responsavel_id) {
               selectedRespIds.add(demand.responsavel_id);
@@ -11042,7 +11101,7 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano (de
         tr.appendChild(el('td', {}, respNames.map((name, idx) => el('div', {}, [idx === respNames.length - 1 ? name : `${name},`]))));
         tr.appendChild(el('td', { class:'mono tiny' }, [`${formatDateBR(d.data_inicio)} - ${formatDateBR(d.data_fim)}`]));
         const allocLabels = activeDemandAllocations(d)
-          .map(a => `${resMap[String(a.resourceId || '').trim()]?.nome || String(a.resourceId || '').trim() || '-'}: ${decimalHoursToHHMM(a.horas_planejadas_dia || a.horas_dia || 0)}`);
+          .map(a => `${resMap[String(a.resourceId || '').trim()]?.nome || String(a.resourceId || '').trim() || '-'}: ${decimalHoursToHHMM(demandAllocationDisplayHours(a, d, state.resources || []))}`);
         tr.appendChild(el('td', {}, [allocLabels.length ? allocLabels.join(' | ') : decimalHoursToHHMM(d.horas_planejadas_dia ?? d.horas_dia ?? 0)]));
         tr.appendChild(el('td', {}, [d.prioridade]));
         tr.appendChild(el('td', {}, [statusPill(d)]));
@@ -11081,8 +11140,8 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano (de
             { label:'Editar', icon:'✎', onClick:edit },
             { label:'Transferir atuação', icon:'⇄', cls:'primary', onClick:() => openDemandTransferModal(primaryDemand) },
             { label:'Reprogramar', icon:'↻', onClick:reprogram },
-            { label:'Concluir', icon:'✓', cls:'primary', onClick:() => openDemandStatusActionModal(primaryDemand, 'Concluída') },
-            { label:'Cancelar', icon:'✕', cls:'danger', onClick:() => openDemandStatusActionModal(primaryDemand, 'Cancelada') },
+            { label:'Concluir', icon:'✓', cls:'primary', onClick:() => openDemandStatusActionModal(primaryDemand, 'Concluída', groupItems) },
+            { label:'Cancelar', icon:'✕', cls:'danger', onClick:() => openDemandStatusActionModal(primaryDemand, 'Cancelada', groupItems) },
             { label:'Excluir', icon:'🗑', cls:'danger', onClick:del },
           ];
         tr.appendChild(el('td', {}, [
@@ -11455,15 +11514,10 @@ const svg = buildCapacityVsPlannedSvg({ title: 'Ocupação Consolidada - Ano (de
     const occPct = cap > 0 ? (alloc / cap) * 100 : 0;
     const demandsCount = (state.demands||[]).filter(d => {
       if (!demandAllocations(d).some(a => String(a.resourceId || '') === String(resourceId))) return false;
-      const st = effectiveStatus(d);
       const monthStart = `${y}-${String(m0+1).padStart(2,'0')}-01`;
       const lastDay = String(new Date(y, m0+1, 0).getDate()).padStart(2,'0');
       const monthEnd = `${y}-${String(m0+1).padStart(2,'0')}-${lastDay}`;
-      if (!demandHistoricalWindowOverlapsRange(d, monthStart, monthEnd)) return false;
-      if (STATUS_COUNTS_IN_ALLOCATION.has(st)) return true;
-      if (st !== 'Concluída') return false;
-      const completionDate = demandCompletionActionDate(d);
-      return !!completionDate && (String(d.data_inicio||'') > monthStart ? String(d.data_inicio||'') : monthStart) < completionDate;
+      return demandAppearsInHeatmapRange(d, monthStart, monthEnd);
     }).length;
     return {
       y, m0,
