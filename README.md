@@ -30,3 +30,7 @@ O build estático é gerado em `out/`. O workflow de GitHub Pages valida tipos, 
 - `src/service-worker.ts`: fonte TypeScript do service worker compilado no build.
 
 O shell e os diálogos são renderizados diretamente pelo React, sem injeção de template ou bundle paralelo. O tema claro/escuro é persistido no navegador e a interface se adapta de desktop a celular. A busca normalizada mantém cache por registro.
+
+## Manual de uso
+
+Consulte o [manual resumido com todas as funcionalidades](docs/MANUAL-DE-USO.md).
