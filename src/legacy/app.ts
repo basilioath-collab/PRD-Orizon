@@ -4600,20 +4600,30 @@ export function bootstrapOrizon(): void {
     let archivedEventCount = 0;
     let activeFilesTouched = 0;
     const archivedFiles = [];
+    const activeEventFiles = [];
 
     for await (const [name, handle] of capviewEventsDirHandle.entries()) {
       if (!handle || handle.kind !== 'file') continue;
       if (!String(name || '').toLowerCase().endsWith('.json')) continue;
       const currentDoc = await readEventFileDocument(handle);
+      if (currentDoc.invalid) throw new Error(`${name}: JSON inválido; o arquivo foi preservado e precisa ser corrigido antes da consolidação.`);
       const current = currentDoc.events || [];
-      const archived = current.filter(ev => ev && ev.id && consolidatedIds.has(String(ev.id)));
-      if (!archived.length) continue;
-      const remaining = current.filter(ev => !ev || !ev.id || !consolidatedIds.has(String(ev.id)));
+      if (!current.length) continue;
+      const notConsolidated = current.filter(ev => !ev?.id || !consolidatedIds.has(String(ev.id)));
+      if (notConsolidated.length) {
+        throw new Error(`${name}: ${notConsolidated.length} evento(s) não foram confirmados no SNAP GERAL; o arquivo foi preservado.`);
+      }
+      activeEventFiles.push({ name, handle, currentDoc, current });
+    }
+
+    for (const { name, handle, currentDoc, current } of activeEventFiles) {
       const archiveHandle = await archiveDir.getFileHandle(name, { create:true });
       const archiveCurrent = await readEventArrayFromHandle(archiveHandle);
-      await writeJsonToFileHandle(archiveHandle, mergeEventListsUnique(archiveCurrent, archived));
-      await writeEventArrayToHandle(handle, remaining, '', '', { currentDoc });
-      archivedEventCount += archived.length;
+      await writeJsonToFileHandle(archiveHandle, mergeEventListsUnique(archiveCurrent, current));
+      await writeEventArrayToHandle(handle, [], '', '', { currentDoc });
+      const verifiedRemaining = await readEventArrayFromHandle(handle);
+      if (verifiedRemaining.length) throw new Error(`${name}: ${verifiedRemaining.length} evento(s) permaneceram no arquivo ativo após a limpeza.`);
+      archivedEventCount += current.length;
       activeFilesTouched += 1;
       archivedFiles.push(String(name));
     }
@@ -4633,6 +4643,17 @@ export function bootstrapOrizon(): void {
       archiveFolder: `events/archive/${folderName}`,
       archivedFiles: [...new Set(archivedFiles)]
     };
+  };
+
+  const verifyConsolidatedSnapshot = async (expectedEvents=[]) => {
+    const writtenSnapshot = await readSnapshotFromEventFolder();
+    const writtenIds = eventIdsSet(writtenSnapshot.events || []);
+    const missingIds = eventIdsSet(expectedEvents || []);
+    for (const id of writtenIds) missingIds.delete(id);
+    if (missingIds.size) {
+      throw new Error(`SNAP GERAL não confirmou ${missingIds.size} evento(s); os arquivos de origem foram preservados.`);
+    }
+    return writtenSnapshot;
   };
 
   const writeSingleEventToUserFile = async (event) => {
@@ -5080,10 +5101,15 @@ export function bootstrapOrizon(): void {
         compactedEventReceiptCount: (merged.events || []).length
       };
       await writeJsonToFileHandle(capviewSnapshotFileHandle, normalizeImportedState(merged));
+      await verifyConsolidatedSnapshot(events);
+      forgetLocalEventsFromOutbox(events.map(ev => ev?.id).filter(Boolean));
 
       let archiveSummary = null;
       try {
-        archiveSummary = await archiveAndClearConsolidatedEventFiles(events, { snapshotEvents: snapshot.events || [] });
+        archiveSummary = await archiveAndClearConsolidatedEventFiles(sharedEvents, { snapshotEvents: snapshot.events || [] });
+        if (sharedEvents.length && (!archiveSummary || archiveSummary.archivedEventCount < sharedEvents.length || !archiveSummary.activeFilesTouched)) {
+          throw new Error('SNAP GERAL foi atualizado, mas nem todos os eventos foram arquivados e zerados nos arquivos de origem.');
+        }
         if (archiveSummary && archiveSummary.archiveFolder) {
           merged.meta = {
             ...(merged.meta && typeof merged.meta === 'object' ? merged.meta : {}),
@@ -5101,6 +5127,7 @@ export function bootstrapOrizon(): void {
           lastArchiveError: archiveError?.message || 'Falha ao arquivar eventos ativos'
         };
         try { await writeJsonToFileHandle(capviewSnapshotFileHandle, normalizeImportedState(merged)); } catch {}
+        throw new Error('SNAP GERAL atualizado, porém os arquivos de eventos não foram zerados: ' + (archiveError?.message || 'falha de limpeza'));
       }
 
       state = normalizeImportedState(merged);
@@ -11054,7 +11081,7 @@ Dias 0h: ${m.daysZero} - Dias excedidos: ${m.daysOver}`;
       selectEl.value = v;
     };
 
-    const type = el('select', {}, [
+    const internalActivityTypeOptions = [
       el('option', { value:'Reunião administrativa' }, ['Reunião administrativa']),
       el('option', { value:'Treinamento' }, ['Treinamento']),
       el('option', { value:'Leitura/Estudo' }, ['Leitura/Estudo']),
@@ -11107,7 +11134,13 @@ Dias 0h: ${m.daysZero} - Dias excedidos: ${m.daysOver}`;
       el('option', { value:'Reunião sobre Melhorias' }, ['Reunião sobre Melhorias']),
       el('option', { value:'RM' }, ['RM']),
       el('option', { value:'CAP - Ciclo de Alta Performance' }, ['CAP - Ciclo de Alta Performance']),
-    ]);
+    ].filter((option, index, options) =>
+      options.findIndex(candidate => String(candidate.value) === String(option.value)) === index
+    ).sort((a,b) => String(a.textContent || '').localeCompare(String(b.textContent || ''), 'pt-BR', {
+      sensitivity:'base',
+      numeric:true,
+    }));
+    const type = el('select', {}, internalActivityTypeOptions);
     const title = el('input', { placeholder:'Título da atividade', value: editingActivity?.titulo || '' });
     const ini = el('input', { type:'date', value: editingActivity?.data_inicio || todayISO() });
     const fim = el('input', { type:'date', value: editingActivity?.data_fim || todayISO() });
