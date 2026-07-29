@@ -1,5 +1,6 @@
 // @ts-nocheck -- parity layer isolated while domain modules are progressively typed.
 import { normalizeSearchText as normalizeIndexedSearchText, SearchTextCache } from "../lib/search-index";
+import { allocationScheduleBounds, mergeAllocationPeriod } from "../domain/allocation-schedule";
 
 // ORIZON Core Clean v0.2.3 ? Métricas planejado x executado por demanda.
 
@@ -567,7 +568,10 @@ export function bootstrapOrizon(): void {
     const date = normalizeDateLikeToISO(dateStr || '') || '';
     if (!date) return null;
     const daily = normalizeAllocationDailyHours(allocation.daily_hours || allocation.dailyHours || allocation.horas_por_dia || {});
-    return Object.prototype.hasOwnProperty.call(daily, date) ? daily[date] : null;
+    if (Object.prototype.hasOwnProperty.call(daily, date)) return daily[date];
+    // Quando existe uma agenda explícita, dias ausentes são intervalos sem
+    // alocação — não devem herdar as horas padrão e reaparecer no heatmap.
+    return Object.keys(daily).length ? 0 : null;
   };
 
   const allocationRepresentativeDate = (allocation={}, demand={}) => {
@@ -3511,11 +3515,19 @@ export function bootstrapOrizon(): void {
     if (demandHasTransferHistory(demand)) return demand;
     const start = normalizeDateLikeToISO(demand.data_inicio || '') || '';
     const end = normalizeDateLikeToISO(demand.data_fim || '') || '';
-    const allocations = normalizeDemandAllocations(demand, resources).map(a => ({
-      ...a,
-      data_inicio: start,
-      data_fim: end,
-    }));
+    const allocations = normalizeDemandAllocations(demand, resources).map(a => {
+      const daily = normalizeAllocationDailyHours(a.daily_hours || a.dailyHours || a.horas_por_dia || {});
+      const scheduledDates = Object.keys(daily).sort();
+      if (scheduledDates.length) {
+        return {
+          ...a,
+          data_inicio: scheduledDates[0],
+          data_fim: scheduledDates[scheduledDates.length - 1],
+          daily_hours: daily,
+        };
+      }
+      return { ...a, data_inicio:start, data_fim:end };
+    });
     return { ...demand, allocations };
   };
 
@@ -5940,11 +5952,24 @@ export function bootstrapOrizon(): void {
     for (const a of demandAllocations(demand)) {
       const rid = String(a.resourceId || '').trim();
       if (!rid) continue;
+      const allocationStart = normalizeDateLikeToISO(a.data_inicio || a.dataInicio || a.start_date || '') || demandStartForAlloc;
+      const allocationEnd = normalizeDateLikeToISO(a.data_fim || a.dataFim || a.end_date || '') || demandEndForAlloc;
+      const allocationHours = demandAllocationDisplayHours(a, demand, state.resources || []);
+      const previousStart = normalizeDateLikeToISO(respStartById.get(rid) || '') || '';
+      const previousEnd = normalizeDateLikeToISO(respEndById.get(rid) || '') || '';
+      let allocationDaily = normalizeAllocationDailyHours(a.daily_hours || a.dailyHours || a.horas_por_dia || {});
+      if (!Object.keys(allocationDaily).length && allocationStart && allocationEnd) {
+        allocationDaily = mergeAllocationPeriod({}, allocationStart, allocationEnd, allocationHours);
+      }
+      const mergedDaily = {
+        ...normalizeAllocationDailyHours(respDailyById.get(rid) || {}),
+        ...allocationDaily,
+      };
       selectedRespIds.add(rid);
-      respHoursById.set(rid, demandAllocationDisplayHours(a, demand, state.resources || []));
-      respStartById.set(rid, normalizeDateLikeToISO(a.data_inicio || a.dataInicio || a.start_date || '') || demandStartForAlloc);
-      respEndById.set(rid, normalizeDateLikeToISO(a.data_fim || a.dataFim || a.end_date || '') || demandEndForAlloc);
-      respDailyById.set(rid, normalizeAllocationDailyHours(a.daily_hours || a.dailyHours || a.horas_por_dia || {}));
+      respHoursById.set(rid, allocationHours);
+      respStartById.set(rid, [previousStart, allocationStart].filter(Boolean).sort()[0] || demandStartForAlloc);
+      respEndById.set(rid, [previousEnd, allocationEnd].filter(Boolean).sort().at(-1) || demandEndForAlloc);
+      respDailyById.set(rid, mergedDaily);
     }
     if (!selectedRespIds.size && demand.responsavel_id) {
       selectedRespIds.add(demand.responsavel_id);
@@ -6092,10 +6117,12 @@ export function bootstrapOrizon(): void {
         const demandEndLimit = normalizeDateLikeToISO(fim.value || demandEndForAlloc || '') || '';
         if (demandStartLimit && changeFrom < demandStartLimit) { toast('O início da atuação precisa estar dentro do período da demanda.'); return; }
         if (demandEndLimit && changeTo > demandEndLimit) { toast('O fim da atuação precisa estar dentro do período da demanda.'); return; }
-        respStartById.set(rid, changeFrom);
-        respEndById.set(rid, changeTo);
-        let daily = {};
-        daily = fillDailyHoursRange(daily, changeFrom, changeTo, nextHours);
+        const previousStart = normalizeDateLikeToISO(respStartById.get(rid) || '') || '';
+        const previousEnd = normalizeDateLikeToISO(respEndById.get(rid) || '') || '';
+        respStartById.set(rid, [previousStart, changeFrom].filter(Boolean).sort()[0] || changeFrom);
+        respEndById.set(rid, [previousEnd, changeTo].filter(Boolean).sort().at(-1) || changeTo);
+        let daily = normalizeAllocationDailyHours(respDailyById.get(rid) || {});
+        daily = mergeAllocationPeriod(daily, changeFrom, changeTo, roundDemandHours(nextHours));
         respDailyById.set(rid, daily);
         respHoursById.set(rid, roundDemandHours(nextHours));
         renderRespAllocSummary();
@@ -6583,16 +6610,22 @@ export function bootstrapOrizon(): void {
       const respIds = (nextStatus === 'Mapeada') ? [] : selectedResponsaveis();
       if (nextStatus !== 'Mapeada' && !respIds.length) { toast('Selecione um ou mais responsáveis ou marque como Mapeada.'); return; }
       const latestDemand = (state.demands || []).find(d => String(d.id) === String(demand.id)) || demand;
-      const allocations = buildEditedDemandAllocations(latestDemand, respIds, respHoursById, nextStatus, iniVal, fimVal)
-        .map(a => {
-          const rid = String(a.resourceId || '').trim();
-          return {
-            ...a,
-            data_inicio: normalizeDateLikeToISO(respStartById.get(rid) || '') || iniVal,
-            data_fim: normalizeDateLikeToISO(respEndById.get(rid) || '') || fimVal,
-            daily_hours: normalizeAllocationDailyHours(respDailyById.get(rid) || {}),
-          };
-        });
+      const previousAllocations = demandAllocations(latestDemand);
+      const allocations = respIds.map(rid => {
+        const previousForResource = previousAllocations.find(a => String(a.resourceId || '').trim() === String(rid));
+        const hours = roundDemandHours(respHoursById.get(rid) ?? demandAllocationDisplayHours(previousForResource || {}, latestDemand, state.resources || []) ?? resourceHoursById(rid, state.resources || []));
+        const daily = normalizeAllocationDailyHours(respDailyById.get(rid) || {});
+        const scheduleBounds = allocationScheduleBounds(daily);
+        return {
+          ...(previousForResource || makeDemandAllocation(rid, hours, state.resources || [])),
+          resourceId: rid,
+          data_inicio: scheduleBounds?.start || normalizeDateLikeToISO(respStartById.get(rid) || '') || iniVal,
+          data_fim: scheduleBounds?.end || normalizeDateLikeToISO(respEndById.get(rid) || '') || fimVal,
+          horas_planejadas_dia: hours,
+          percentual_diario: demandHoursToPercent(hours, rid, state.resources || []),
+          daily_hours: daily,
+        };
+      });
       const allocValidation = validateDemandAllocationLimits(allocations);
       if (!allocValidation.ok) { toast(allocValidation.msg); return; }
       const demandForPrimary = { ...latestDemand, data_inicio: iniVal, data_fim: fimVal, allocations };
